@@ -99,6 +99,18 @@ docker compose \
 
 The `Authorization: Bearer` value must match `Security__ApiKey` in your `.env` file.
 
+### Connecting from claude.ai
+
+1. Go to **claude.ai** → Settings → **Connectors** → **Add custom connector**
+2. Enter your server URL: `http://your-host:9011/mcp`
+3. Under **Authentication**, select **No sign-in**
+4. Under **Request headers**, add:
+   - Header name: `Authorization`
+   - Value: `Bearer your-api-key`
+5. Click **Add**
+
+The server must be publicly reachable from the internet. If it's on a local NAS, expose it via a tunnel such as [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) or ngrok.
+
 ## Running tests
 
 Tests hit the real Listonic API, so credentials are required. They are never stored in the repo.
