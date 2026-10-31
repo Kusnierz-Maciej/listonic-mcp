@@ -54,12 +54,12 @@ named `Build & Publish v1.3.3`.
 > git merge-base --is-ancestor v1.3.3^{commit} main && echo "on main ✓"
 > ```
 
-### 3. Wait for the image build
+### 3. Wait for the image build and verify
 
 The workflow builds and pushes two tags to GHCR: the version and `latest`.
 
 ```bash
-# find the run and watch it
+# find the run and watch it — exits non-zero if it fails
 gh run list --workflow=docker-publish.yml --limit 1
 gh run watch <run-id> --exit-status
 ```
@@ -79,7 +79,15 @@ You can also trigger a build manually without a new tag:
 gh workflow run docker-publish.yml -f tag=v1.3.3
 ```
 
+Package page: <https://github.com/Kusnierz-Maciej/listonic-mcp/pkgs/container/listonic-mcp>
+
+The package must be **public** for anonymous pulls (one-time setting; it stays
+public for all future pushes). Check at the package settings page under
+*Danger Zone → Change visibility*.
+
 ### 4. Create the GitHub release
+
+Only after the GHCR workflow is green and both tags are confirmed present.
 
 ```bash
 gh release create v1.3.3 --title "v1.3.3" --notes "$(cat <<'EOF'
@@ -104,21 +112,6 @@ EOF
 )"
 ```
 
-### 5. Link / verify the image
-
-The published image for the release:
-
-```
-ghcr.io/kusnierz-maciej/listonic-mcp:v1.3.3
-ghcr.io/kusnierz-maciej/listonic-mcp:latest
-```
-
-Package page: <https://github.com/Kusnierz-Maciej/listonic-mcp/pkgs/container/listonic-mcp>
-
-The package must be **public** for anonymous pulls (one-time setting; it stays
-public for all future pushes). Check at the package settings page under
-*Danger Zone → Change visibility*.
-
 ## Checklist
 
 - [ ] `<Version>` bumped in `ListonicMcp.csproj`
@@ -126,4 +119,3 @@ public for all future pushes). Check at the package settings page under
 - [ ] Signed `v<version>` tag pushed, and it is an ancestor of `main`
 - [ ] GHCR workflow green; `v<version>` and `latest` tags present
 - [ ] GitHub release created with notes
-- [ ] Image reference verified
