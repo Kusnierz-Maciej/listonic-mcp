@@ -10,7 +10,6 @@
     <PropertyGroup>
         <ContainerBaseImage>mcr.microsoft.com/dotnet/aspnet:10.0-alpine</ContainerBaseImage>
         <ContainerRepository>listonic-mcp</ContainerRepository>
-        <ContainerImageTags>v$(Version);latest</ContainerImageTags>
     </PropertyGroup>
 
     <ItemGroup>
