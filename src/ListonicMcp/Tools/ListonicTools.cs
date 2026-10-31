@@ -63,7 +63,7 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
     [Description("Add one or more items to a list. Batch all additions in a single call.")]
     public async Task<string> AddItemsAsync(
         [Description("The list ID (from get_lists)")] string listId,
-        [Description("Items to add")] IEnumerable<AddItemInput> items,
+        [Description("Items to add")] List<AddItemInput> items,
         CancellationToken ct = default)
     {
         var api = accessor.Api;
@@ -85,7 +85,7 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
     [Description("Edit one or more items on a list (PATCH semantics — null fields are not changed).")]
     public async Task<string> EditItemsAsync(
         [Description("The list ID (from get_lists)")] string listId,
-        [Description("Items to edit")] IEnumerable<EditItemInput> items,
+        [Description("Items to edit")] List<EditItemInput> items,
         CancellationToken ct = default)
     {
         var api = accessor.Api;
@@ -107,7 +107,7 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
     [Description("Permanently remove one or more items from a list (not check off — use edit_items for that).")]
     public async Task<string> DeleteItemsAsync(
         [Description("The list ID (from get_lists)")] string listId,
-        [Description("Item IDs to delete (from get_items)")] IEnumerable<string> itemIds,
+        [Description("Item IDs to delete (from get_items)")] List<string> itemIds,
         CancellationToken ct = default)
     {
         var api = accessor.Api;
