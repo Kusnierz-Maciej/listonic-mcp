@@ -132,6 +132,51 @@ docker compose \
 
 `Authorization: Basic` carries Listonic credentials encoded as `base64(email:password)`. If omitted, the server falls back to `Listonic__Email`/`Listonic__Password` from `.env`. This means multiple users can share one server instance, each passing their own credentials — no server restart required to add a new account.
 
+### Synology NAS (Docker Compose from GHCR, no login)
+
+Works on Intel/AMD Synology models. The published image is `linux/amd64`.
+
+**Prerequisite — make the GHCR package public** (one-time, so the NAS can pull anonymously):
+[Package settings](https://github.com/users/Kusnierz-Maciej/packages/container/listonic-mcp/settings) → **Danger Zone → Change visibility → Public**. Once public it stays public for all future pushes.
+
+**1. Create a deploy directory on the NAS:**
+
+```bash
+mkdir -p /volume1/docker/listonic-mcp && cd /volume1/docker/listonic-mcp
+```
+
+**2. Create `docker-compose.yml`:**
+
+```yaml
+services:
+  listonic-mcp:
+    container_name: listonic-mcp
+    image: ghcr.io/kusnierz-maciej/listonic-mcp:latest
+    ports:
+      - "9011:8080"
+    env_file:
+      - .env
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+    restart: unless-stopped
+```
+
+**3. Create `.env`** (fill in email, password, and a strong random API key):
+
+```
+Security__ApiKey=your-strong-random-key
+Listonic__Email=your@email.com
+Listonic__Password=yourpassword
+```
+
+**4. Start it:**
+
+```bash
+sudo docker compose up -d
+```
+
+`sudo` is required for DSM's Docker socket — it is not a registry login. No `docker login` is needed as long as the package is public.
+
 ### Connecting from claude.ai
 
 1. Go to **claude.ai** → Settings → **Connectors** → **Add custom connector**
