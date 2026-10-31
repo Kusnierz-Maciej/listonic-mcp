@@ -72,9 +72,8 @@ docker load < listonic-mcp-v1.0.0.tar.gz
 ```bash
 cp src/ListonicMcp/docker/.env.example src/ListonicMcp/docker/.env
 # Edit .env — fill in email, password, and a strong random API key
-# If your password contains $, escape each one as $$  (Docker Compose interpolation)
-# If your password contains %, escape each one as %%  (ASP.NET Core interpolation)
-# Example: p@$$w0rd%%! → p@$$$$w0rd%%%%!
+# If your password contains $, escape each one as $$  (Docker Compose variable interpolation)
+# Example: p@$$w0rd! → p@$$$$w0rd!
 ```
 
 **3. Start the container:**
