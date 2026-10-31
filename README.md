@@ -57,7 +57,7 @@ dotnet publish src/ListonicMcp/ListonicMcp.csproj \
 **2. Configure credentials and API key:**
 
 ```bash
-cp src/ListonicMcp/docker/example.env src/ListonicMcp/docker/.env
+cp src/ListonicMcp/docker/.env.example src/ListonicMcp/docker/.env
 # Edit .env — fill in email, password, and a strong random API key
 ```
 
