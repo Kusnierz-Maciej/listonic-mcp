@@ -129,10 +129,10 @@ public class ListonicApiTests
         var list = await _api.CreateListAsync(new CreateListRequest { Name = TestPrefix + "UpdateItemCheck" });
         var item = await _api.AddItemAsync(list.Id, new AddItemRequest { Name = "Butter" });
 
-        await _api.UpdateItemAsync(list.Id, item.Id, new UpdateItemRequest { IsChecked = 1 });
+        await _api.UpdateItemAsync(list.Id, item.Id, new UpdateItemRequest { IsChecked = true });
 
         var items = await _api.GetItemsAsync(list.Id);
-        await Assert.That(items.Single(i => i.Id == item.Id).Checked).IsEqualTo(1);
+        await Assert.That(items.Single(i => i.Id == item.Id).Checked).IsTrue();
     }
 
     [Test]

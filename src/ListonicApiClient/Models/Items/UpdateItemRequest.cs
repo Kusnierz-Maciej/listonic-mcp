@@ -1,11 +1,13 @@
 using System.Text.Json.Serialization;
+using ListonicApiClient.Converters;
 
 namespace ListonicApiClient.Models.Items;
 
 public class UpdateItemRequest
 {
     [JsonPropertyName("checked")]
-    public int? IsChecked { get; init; }
+    [JsonConverter(typeof(ZeroOneBoolConverter))]
+    public bool? IsChecked { get; init; }
 
     [JsonPropertyName("name")]
     public string? Name { get; init; }
