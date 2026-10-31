@@ -92,7 +92,7 @@ docker load < listonic-mcp-v1.3.2.tar.gz
 ```
 </details>
 
-**2. Configure credentials and API key:**
+**2. Configure credentials and API key** (template: [`.env.example`](src/ListonicMcp/docker/.env.example)):
 
 ```bash
 cp src/ListonicMcp/docker/.env.example src/ListonicMcp/docker/.env
@@ -101,7 +101,7 @@ cp src/ListonicMcp/docker/.env.example src/ListonicMcp/docker/.env
 # Example: p@$$w0rd! → p@$$$$w0rd!
 ```
 
-**3. Start the container:**
+**3. Start the container** (compose file: [`docker-compose.prod.yml`](src/ListonicMcp/docker/docker-compose.prod.yml)):
 
 ```bash
 docker compose \
@@ -145,7 +145,7 @@ Works on Intel/AMD Synology models. The published image is `linux/amd64`.
 mkdir -p /volume1/docker/listonic-mcp && cd /volume1/docker/listonic-mcp
 ```
 
-**2. Create `docker-compose.yml`:**
+**2. Create `docker-compose.yml`** (or copy [`docker-compose.prod.yml`](src/ListonicMcp/docker/docker-compose.prod.yml) from this repo):
 
 ```yaml
 services:
@@ -161,7 +161,7 @@ services:
     restart: unless-stopped
 ```
 
-**3. Create `.env`** (fill in email, password, and a strong random API key):
+**3. Create `.env`** (template: [`.env.example`](src/ListonicMcp/docker/.env.example) — fill in email, password, and a strong random API key):
 
 ```
 Security__ApiKey=your-strong-random-key
