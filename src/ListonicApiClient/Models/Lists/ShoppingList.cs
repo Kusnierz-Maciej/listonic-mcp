@@ -1,6 +1,6 @@
-using ListonicMcpApiClient.Models.Items;
+using ListonicApiClient.Models.Items;
 
-namespace ListonicMcpApiClient.Models.Lists;
+namespace ListonicApiClient.Models.Lists;
 
 public class ShoppingList
 {

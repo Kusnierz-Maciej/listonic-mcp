@@ -1,6 +1,6 @@
 using Refit;
 
-namespace ListonicMcpApiClient.Models.Lists;
+namespace ListonicApiClient.Models.Lists;
 
 public class GetListsRequest
 {

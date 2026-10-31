@@ -1,6 +1,6 @@
 using Refit;
 
-namespace ListonicMcpApiClient.Models.Login;
+namespace ListonicApiClient.Models.Login;
 
 public class LoginRequest
 {

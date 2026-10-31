@@ -1,9 +1,9 @@
-using ListonicMcpApiClient.Models.Login;
+using ListonicApiClient.Models.Login;
 using Refit;
-using ListonicMcpApiClient.Models.Items;
-using ListonicMcpApiClient.Models.Lists;
+using ListonicApiClient.Models.Items;
+using ListonicApiClient.Models.Lists;
 
-namespace ListonicMcpApiClient;
+namespace ListonicApiClient;
 
 public interface IListonicApi
 {

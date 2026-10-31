@@ -1,4 +1,4 @@
-namespace ListonicMcpApiClient.Models.Items;
+namespace ListonicApiClient.Models.Items;
 
 public class AddItemRequest
 {

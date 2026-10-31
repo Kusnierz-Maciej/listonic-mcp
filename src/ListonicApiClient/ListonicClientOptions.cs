@@ -1,4 +1,4 @@
-namespace ListonicMcpApiClient;
+namespace ListonicApiClient;
 
 public class ListonicClientOptions
 {

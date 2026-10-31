@@ -1,9 +1,9 @@
 using System.Net;
 using System.Net.Http.Headers;
-using ListonicMcpApiClient.Models.Login;
+using ListonicApiClient.Models.Login;
 using Refit;
 
-namespace ListonicMcpApiClient;
+namespace ListonicApiClient;
 
 public class ListonicAuthHandler : DelegatingHandler
 {

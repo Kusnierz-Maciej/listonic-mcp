@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Refit;
 
-namespace ListonicMcpApiClient;
+namespace ListonicApiClient;
 
 public static class ServiceCollectionExtensions
 {

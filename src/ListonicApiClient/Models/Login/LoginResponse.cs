@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace ListonicMcpApiClient.Models.Login;
+namespace ListonicApiClient.Models.Login;
 
 public class LoginResponse
 {
