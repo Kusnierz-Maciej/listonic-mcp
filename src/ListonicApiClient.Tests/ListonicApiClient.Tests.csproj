@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <OutputType>Exe</OutputType>
+        <IsPackable>false</IsPackable>
+        <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+        <UserSecretsId>listonic-api-client-tests</UserSecretsId>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="TUnit" Version="1.61.29" />
+        <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.10" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.10" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.10" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.10" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\ListonicApiClient\ListonicApiClient.csproj" />
+    </ItemGroup>
+
+</Project>
