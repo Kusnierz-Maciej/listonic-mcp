@@ -16,49 +16,6 @@ Unofficial MCP server for [Listonic](https://listonic.com) grocery lists, built 
 
 ## Running the MCP server
 
-### Local development
-
-Credentials can be supplied either via user secrets (server-side fallback) or per-request headers. For local dev the simplest approach is user secrets:
-
-```bash
-dotnet user-secrets --project src/ListonicMcp set "Listonic:Email" "your@email.com"
-dotnet user-secrets --project src/ListonicMcp set "Listonic:Password" "yourpassword"
-
-dotnet run --project src/ListonicMcp
-# Server starts at http://localhost:5100
-```
-
-No API key is required in development — `Security:ApiKey` is unset so the middleware lets all requests through.
-
-Connect Claude Code by adding to your MCP config (`.mcp.json` in the project root or `~/.claude/mcp.json`):
-
-```json
-{
-  "mcpServers": {
-    "listonic": {
-      "type": "http",
-      "url": "http://localhost:5100/mcp"
-    }
-  }
-}
-```
-
-Alternatively, skip user secrets entirely and pass credentials as a Basic auth header (useful when testing multi-account):
-
-```json
-{
-  "mcpServers": {
-    "listonic": {
-      "type": "http",
-      "url": "http://localhost:5100/mcp",
-      "headers": {
-        "Authorization": "Basic <base64(email:password)>"
-      }
-    }
-  }
-}
-```
-
 ### Docker (production / NAS)
 
 The image is published to GHCR on every release — no build or clone required.
@@ -174,6 +131,49 @@ Listonic__Password=yourpassword
 5. Click **Add**
 
 The server must be publicly reachable from the internet. If it's on a local NAS, expose it via a tunnel such as [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) or ngrok.
+
+### Local development
+
+Credentials can be supplied either via user secrets (server-side fallback) or per-request headers. For local dev the simplest approach is user secrets:
+
+```bash
+dotnet user-secrets --project src/ListonicMcp set "Listonic:Email" "your@email.com"
+dotnet user-secrets --project src/ListonicMcp set "Listonic:Password" "yourpassword"
+
+dotnet run --project src/ListonicMcp
+# Server starts at http://localhost:5100
+```
+
+No API key is required in development — `Security:ApiKey` is unset so the middleware lets all requests through.
+
+Connect Claude Code by adding to your MCP config (`.mcp.json` in the project root or `~/.claude/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "listonic": {
+      "type": "http",
+      "url": "http://localhost:5100/mcp"
+    }
+  }
+}
+```
+
+Alternatively, skip user secrets entirely and pass credentials as a Basic auth header (useful when testing multi-account):
+
+```json
+{
+  "mcpServers": {
+    "listonic": {
+      "type": "http",
+      "url": "http://localhost:5100/mcp",
+      "headers": {
+        "Authorization": "Basic <base64(email:password)>"
+      }
+    }
+  }
+}
+```
 
 ## Running tests
 
