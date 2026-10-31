@@ -11,3 +11,9 @@ TestResults/
 # IDE
 .idea/
 *.user
+
+# MCP config (may contain secrets)
+.mcp.json
+
+# Docker env files
+**/.env
