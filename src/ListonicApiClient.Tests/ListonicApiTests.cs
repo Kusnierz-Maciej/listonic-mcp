@@ -83,10 +83,10 @@ public class ListonicApiTests
     {
         var list = await _api.CreateListAsync(new CreateListRequest { Name = TestPrefix + "AddItem" });
 
-        var item = await _api.AddItemAsync(list.Id, new AddItemRequest { Name = "Milk" });
+        var item = await _api.AddItemAsync(list.Id, new AddItemRequest { Name = "mleko" });
 
         await Assert.That(item.Id).IsNotEmpty();
-        await Assert.That(item.Name).IsEqualTo("Milk");
+        await Assert.That(item.Name).IsEqualTo("mleko");
     }
 
     [Test]
@@ -96,38 +96,38 @@ public class ListonicApiTests
 
         var added = await _api.AddItemAsync(list.Id, new AddItemRequest
         {
-            Name        = "Eggs",
+            Name        = "jajka",
             Quantity    = "12",
-            Unit        = "pcs",
-            Description = "free range"
+            Unit        = "szt",
+            Description = "od kur z wolnego wybiegu"
         });
 
         // Re-fetch — the add response doesn't always populate all fields
         var item = (await _api.GetItemsAsync(list.Id)).Single(i => i.Id == added.Id);
 
-        await Assert.That(item.Name).IsEqualTo("Eggs");
+        await Assert.That(item.Name).IsEqualTo("jajka");
         await Assert.That(item.Amount).IsEqualTo("12");
-        await Assert.That(item.Unit).IsEqualTo("pcs");
-        await Assert.That(item.Description).IsEqualTo("free range");
+        await Assert.That(item.Unit).IsEqualTo("szt");
+        await Assert.That(item.Description).IsEqualTo("od kur z wolnego wybiegu");
     }
 
     [Test]
     public async Task UpdateItem_Name_UpdatesSuccessfully()
     {
         var list = await _api.CreateListAsync(new CreateListRequest { Name = TestPrefix + "UpdateItemName" });
-        var item = await _api.AddItemAsync(list.Id, new AddItemRequest { Name = "OldName" });
+        var item = await _api.AddItemAsync(list.Id, new AddItemRequest { Name = "chleb pszenny" });
 
-        await _api.UpdateItemAsync(list.Id, item.Id, new UpdateItemRequest { Name = "NewName" });
+        await _api.UpdateItemAsync(list.Id, item.Id, new UpdateItemRequest { Name = "chleb żytni" });
 
         var items = await _api.GetItemsAsync(list.Id);
-        await Assert.That(items.Single(i => i.Id == item.Id).Name).IsEqualTo("NewName");
+        await Assert.That(items.Single(i => i.Id == item.Id).Name).IsEqualTo("chleb żytni");
     }
 
     [Test]
     public async Task UpdateItem_IsChecked_TogglesChecked()
     {
         var list = await _api.CreateListAsync(new CreateListRequest { Name = TestPrefix + "UpdateItemCheck" });
-        var item = await _api.AddItemAsync(list.Id, new AddItemRequest { Name = "Butter" });
+        var item = await _api.AddItemAsync(list.Id, new AddItemRequest { Name = "masło" });
 
         await _api.UpdateItemAsync(list.Id, item.Id, new UpdateItemRequest { IsChecked = true });
 
@@ -139,12 +139,34 @@ public class ListonicApiTests
     public async Task DeleteItem_RemovesFromItems()
     {
         var list = await _api.CreateListAsync(new CreateListRequest { Name = TestPrefix + "DeleteItem" });
-        var item = await _api.AddItemAsync(list.Id, new AddItemRequest { Name = "Sugar" });
+        var item = await _api.AddItemAsync(list.Id, new AddItemRequest { Name = "cukier" });
 
         await _api.DeleteItemAsync(list.Id, item.Id);
 
         var items = await _api.GetItemsAsync(list.Id);
         await Assert.That(items.Any(i => i.Id == item.Id)).IsFalse();
+    }
+
+    [Test]
+    public async Task UpdateItem_WithNullFields_DoesNotClearExistingValues()
+    {
+        var list = await _api.CreateListAsync(new CreateListRequest { Name = TestPrefix + "UpdateItemNulls" });
+        var item = await _api.AddItemAsync(list.Id, new AddItemRequest
+        {
+            Name     = "ser żółty",
+            Quantity = "500",
+            Unit     = "g"
+        });
+        await _api.UpdateItemAsync(list.Id, item.Id, new UpdateItemRequest { IsChecked = true });
+
+        // Patch only Name — IsChecked, Quantity and Unit are null in the request
+        await _api.UpdateItemAsync(list.Id, item.Id, new UpdateItemRequest { Name = "ser gouda" });
+
+        var updated = (await _api.GetItemsAsync(list.Id)).Single(i => i.Id == item.Id);
+        await Assert.That(updated.Name).IsEqualTo("ser gouda");
+        await Assert.That(updated.Checked).IsTrue();   // must not be reset to false by null IsChecked
+        await Assert.That(updated.Amount).IsEqualTo("500"); // must not be cleared by null Quantity
+        await Assert.That(updated.Unit).IsEqualTo("g");
     }
 
     [Test]
