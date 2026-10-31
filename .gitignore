@@ -17,3 +17,7 @@ TestResults/
 
 # Docker env files
 **/.env
+
+# Claude Code local state
+.claude/settings.local.json
+.claude/worktrees/
