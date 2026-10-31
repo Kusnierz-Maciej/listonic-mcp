@@ -39,15 +39,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract version from tag
-        id: version
-        run: |
-          REF="${{ inputs.tag || github.ref_name }}"
-          echo "VERSION=${REF#v}" >> "$GITHUB_OUTPUT"
-
       - name: Publish container image
-        env:
-          ContainerImageTags: ${{ steps.version.outputs.VERSION }};latest
         run: |
           dotnet publish src/ListonicMcp/ListonicMcp.csproj \
             /t:PublishContainer \

@@ -66,7 +66,7 @@ Alternatively, skip user secrets entirely and pass credentials as a Basic auth h
 ```bash
 docker pull ghcr.io/kusnierz-maciej/listonic-mcp:latest
 # or pin to a specific version
-docker pull ghcr.io/kusnierz-maciej/listonic-mcp:1.3.2
+docker pull ghcr.io/kusnierz-maciej/listonic-mcp:v1.3.2
 ```
 
 Images are published automatically on every release via GitHub Actions.
