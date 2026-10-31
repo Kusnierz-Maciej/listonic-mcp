@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Version>1.0.0</Version>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <ContainerBaseImage>mcr.microsoft.com/dotnet/aspnet:10.0-alpine</ContainerBaseImage>
+        <ContainerRepository>listonic-mcp</ContainerRepository>
+        <ContainerImageTags>v$(Version);latest</ContainerImageTags>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ContainerPort Include="8080" Type="tcp" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="ModelContextProtocol.AspNetCore" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\ListonicApiClient\ListonicApiClient.csproj" />
+    </ItemGroup>
+
+</Project>

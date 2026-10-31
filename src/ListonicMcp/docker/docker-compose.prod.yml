@@ -1,0 +1,12 @@
+services:
+  listonic-mcp:
+    container_name: listonic-mcp
+    image: listonic-mcp:latest
+    ports:
+      - "9011:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - Listonic__Email=${Listonic__Email}
+      - Listonic__Password=${Listonic__Password}
+      - Security__ApiKey=${Security__ApiKey}
+    restart: unless-stopped
