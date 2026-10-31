@@ -61,7 +61,18 @@ Alternatively, skip user secrets entirely and pass credentials as a Basic auth h
 
 ### Docker (production / NAS)
 
-**1. Build the container image** (no Dockerfile — the SDK builds it):
+**1. Pull the container image from GHCR:**
+
+```bash
+docker pull ghcr.io/kusnierz-maciej/listonic-mcp:latest
+# or pin to a specific version
+docker pull ghcr.io/kusnierz-maciej/listonic-mcp:1.3.2
+```
+
+Images are published automatically on every release via GitHub Actions.
+
+<details>
+<summary>Build the image locally instead</summary>
 
 ```bash
 dotnet publish src/ListonicMcp/ListonicMcp.csproj \
@@ -69,21 +80,17 @@ dotnet publish src/ListonicMcp/ListonicMcp.csproj \
   -c Release \
   -r linux-x64 \
   --no-self-contained
-# Produces: listonic-mcp:latest and listonic-mcp:v1.0.0
+# Produces: listonic-mcp:latest and listonic-mcp:1.3.2
 ```
 
-**1b. (Optional) Export the image as a tarball for transfer to a NAS:**
+To transfer to a NAS without a registry:
 
 ```bash
-# Save with version suffix
-docker save listonic-mcp:latest | gzip > listonic-mcp-v1.0.0.tar.gz
-
-# Copy to NAS
-scp listonic-mcp-v1.0.0.tar.gz user@nas:/path/to/deploy/
-
-# Load on NAS
-docker load < listonic-mcp-v1.0.0.tar.gz
+docker save listonic-mcp:latest | gzip > listonic-mcp-1.3.2.tar.gz
+scp listonic-mcp-1.3.2.tar.gz user@nas:/path/to/deploy/
+docker load < listonic-mcp-1.3.2.tar.gz
 ```
+</details>
 
 **2. Configure credentials and API key:**
 

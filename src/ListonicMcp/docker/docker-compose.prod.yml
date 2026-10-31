@@ -1,7 +1,7 @@
 services:
   listonic-mcp:
     container_name: listonic-mcp
-    image: listonic-mcp:latest
+    image: ghcr.io/kusnierz-maciej/listonic-mcp:latest
     ports:
       - "9011:8080"
     env_file:
