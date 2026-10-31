@@ -61,53 +61,38 @@ Alternatively, skip user secrets entirely and pass credentials as a Basic auth h
 
 ### Docker (production / NAS)
 
-**1. Pull the container image from GHCR:**
+The image is published to GHCR on every release — no build or clone required.
 
-```bash
-docker pull ghcr.io/kusnierz-maciej/listonic-mcp:latest
-# or pin to a specific version
-docker pull ghcr.io/kusnierz-maciej/listonic-mcp:v1.3.2
+**1. Create a `docker-compose.yml`:**
+
+```yaml
+services:
+  listonic-mcp:
+    container_name: listonic-mcp
+    image: ghcr.io/kusnierz-maciej/listonic-mcp:latest   # or pin a version, e.g. :v1.3.2
+    ports:
+      - "9011:8080"
+    env_file:
+      - .env
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+    restart: unless-stopped
 ```
 
-Images are published automatically on every release via GitHub Actions.
+**2. Create a `.env` next to it** (fill in email, password, and a strong random API key):
 
-<details>
-<summary>Build the image locally instead</summary>
-
-```bash
-dotnet publish src/ListonicMcp/ListonicMcp.csproj \
-  /t:PublishContainer \
-  -c Release \
-  -r linux-x64 \
-  --no-self-contained
-# Produces: listonic-mcp:v1.3.2 and listonic-mcp:latest
+```
+Security__ApiKey=your-strong-random-key
+Listonic__Email=your@email.com
+Listonic__Password=yourpassword
 ```
 
-To transfer to a NAS without a registry:
+> If your password contains `$`, escape each one as `$$` (Docker Compose variable interpolation). Example: `p@$w0rd!` → `p@$$w0rd!`
+
+**3. Start it:**
 
 ```bash
-docker save listonic-mcp:latest | gzip > listonic-mcp-v1.3.2.tar.gz
-scp listonic-mcp-v1.3.2.tar.gz user@nas:/path/to/deploy/
-docker load < listonic-mcp-v1.3.2.tar.gz
-```
-</details>
-
-**2. Configure credentials and API key** (template: [`.env.example`](src/ListonicMcp/docker/.env.example)):
-
-```bash
-cp src/ListonicMcp/docker/.env.example src/ListonicMcp/docker/.env
-# Edit .env — fill in email, password, and a strong random API key
-# If your password contains $, escape each one as $$  (Docker Compose variable interpolation)
-# Example: p@$$w0rd! → p@$$$$w0rd!
-```
-
-**3. Start the container** (compose file: [`docker-compose.prod.yml`](src/ListonicMcp/docker/docker-compose.prod.yml)):
-
-```bash
-docker compose \
-  -f src/ListonicMcp/docker/docker-compose.prod.yml \
-  --env-file src/ListonicMcp/docker/.env \
-  up -d
+docker compose up -d
 # Exposed on host port 9011
 ```
 
@@ -132,26 +117,19 @@ docker compose \
 
 `Authorization: Basic` carries Listonic credentials encoded as `base64(email:password)`. If omitted, the server falls back to `Listonic__Email`/`Listonic__Password` from `.env`. This means multiple users can share one server instance, each passing their own credentials — no server restart required to add a new account.
 
-### Synology NAS (Docker Compose from GHCR, no login)
+### Synology NAS (Container Manager)
 
-Works on Intel/AMD Synology models. The published image is `linux/amd64`.
+The published image is `linux/amd64` — use an Intel/AMD Synology model.
 
-**Prerequisite — make the GHCR package public** (one-time, so the NAS can pull anonymously):
-[Package settings](https://github.com/users/Kusnierz-Maciej/packages/container/listonic-mcp/settings) → **Danger Zone → Change visibility → Public**. Once public it stays public for all future pushes.
+**1. Create a folder** for the project, e.g. via File Station: `/docker/listonic-mcp`.
 
-**1. Create a deploy directory on the NAS:**
-
-```bash
-mkdir -p /volume1/docker/listonic-mcp && cd /volume1/docker/listonic-mcp
-```
-
-**2. Create `docker-compose.yml`** (or copy [`docker-compose.prod.yml`](src/ListonicMcp/docker/docker-compose.prod.yml) from this repo):
+**2. Put a `docker-compose.yml` in that folder:**
 
 ```yaml
 services:
   listonic-mcp:
     container_name: listonic-mcp
-    image: ghcr.io/kusnierz-maciej/listonic-mcp:latest
+    image: ghcr.io/kusnierz-maciej/listonic-mcp:latest   # or pin a version, e.g. :v1.3.2
     ports:
       - "9011:8080"
     env_file:
@@ -161,7 +139,7 @@ services:
     restart: unless-stopped
 ```
 
-**3. Create `.env`** (template: [`.env.example`](src/ListonicMcp/docker/.env.example) — fill in email, password, and a strong random API key):
+**3. Put a `.env` in the same folder** (fill in email, password, and a strong random API key):
 
 ```
 Security__ApiKey=your-strong-random-key
@@ -169,13 +147,11 @@ Listonic__Email=your@email.com
 Listonic__Password=yourpassword
 ```
 
-**4. Start it:**
-
-```bash
-sudo docker compose up -d
-```
-
-`sudo` is required for DSM's Docker socket — it is not a registry login. No `docker login` is needed as long as the package is public.
+**4. In Container Manager → Project → Create:**
+- **Project name:** `listonic-mcp`
+- **Path:** select the `/docker/listonic-mcp` folder you created.
+- **Source:** Container Manager detects the existing `docker-compose.yml` in that folder — use it.
+- Click through to build/run. It pulls the image from GHCR and starts the container on host port `9011`.
 
 ### Connecting from claude.ai
 
