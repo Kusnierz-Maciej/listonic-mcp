@@ -57,6 +57,7 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
         "Several rows can share a name. When the user names such an item, tick or untick every row the change applies to (only unchecked rows when ticking off); ask which one before deleting it or changing its amount (consider only unchecked rows unless the user means a checked one).")]
     public async Task<string> GetItemsAsync(
         [Description("The list ID (from get_lists)")] string listId,
+        [Description("List name — shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string? listName = null,
         CancellationToken ct = default)
     {
         var items = await accessor.Api.GetItemsAsync(listId, ct);
@@ -75,6 +76,7 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
         "Returns the added items in get_items format.")]
     public async Task<string> AddItemsAsync(
         [Description("The list ID (from get_lists)")] string listId,
+        [Description("List name — shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,
         [Description("Items to add")] List<AddItemInput> items,
         CancellationToken ct = default)
     {
@@ -110,6 +112,7 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
         "Batch: send all items to change in one call. Returns the updated items in get_items format.")]
     public async Task<string> EditItemsAsync(
         [Description("The list ID (from get_lists)")] string listId,
+        [Description("List name — shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,
         [Description("Items to edit")] List<EditItemInput> items,
         CancellationToken ct = default)
     {
@@ -145,6 +148,7 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
         "Get itemIds from get_items. Always pass confirmName alongside each itemId. Returns the deleted items in get_items format.")]
     public async Task<string> DeleteItemsAsync(
         [Description("The list ID (from get_lists)")] string listId,
+        [Description("List name — shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,
         [Description("Items to delete (from get_items)")] List<DeleteItemInput> items,
         CancellationToken ct = default)
     {
@@ -167,6 +171,7 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
     [Description("Rename an existing shopping list. On a shared list the new name is visible to everyone who shares it. This server can't create lists — tell the user to do that in the Listonic app.")]
     public async Task<string> RenameListAsync(
         [Description("The list ID (from get_lists)")] string listId,
+        [Description("List name — shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,
         [Description("New name for the list")] string name,
         CancellationToken ct = default)
     {
@@ -178,6 +183,7 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
     [Description("Move a whole shopping list to the Listonic trash; it can be restored from the trash in the app. On a shared list this removes it for everyone who shares it — get_lists shows whether a list is shared. Always confirm with the user, naming the list, before calling. To delete items but keep the list, use delete_items instead.")]
     public async Task<string> DeleteListAsync(
         [Description("The list ID (from get_lists)")] string listId,
+        [Description("List name — shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,
         CancellationToken ct = default)
     {
         await accessor.Api.DeleteListAsync(listId, ct);
