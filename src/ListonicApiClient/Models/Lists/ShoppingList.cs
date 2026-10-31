@@ -27,6 +27,9 @@ public class ShoppingList
 
 public class ListShare
 {
-    [JsonPropertyName("Owner")]
-    public int Owner { get; init; }
+    [JsonPropertyName("Email")]
+    public string Email { get; init; } = string.Empty;
+
+    [JsonPropertyName("Display")]
+    public string Display { get; init; } = string.Empty;
 }

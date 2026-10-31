@@ -37,6 +37,24 @@ public class ListonicApiTests
     }
 
     [Test]
+    public async Task GetLists_WithIncludeShares_PopulatesCountsAndShares()
+    {
+        var list = await _api.CreateListAsync(new CreateListRequest { Name = TestPrefix + "GetListsCounts" });
+        // Add two items and check one so we have known counts
+        var item1 = await _api.AddItemAsync(list.Id, new AddItemRequest { Name = "test-item-a" });
+        var item2 = await _api.AddItemAsync(list.Id, new AddItemRequest { Name = "test-item-b" });
+        await _api.UpdateItemAsync(list.Id, item1.Id, new UpdateItemRequest { IsChecked = true });
+
+        var lists = await _api.GetListsAsync(new GetListsRequest { IncludeShares = true });
+
+        var found = lists.Single(l => l.Id == list.Id);
+        await Assert.That(found.ItemsCount).IsEqualTo(2);
+        await Assert.That(found.CheckedItemsCount).IsEqualTo(1);
+        await Assert.That(found.IsOwner).IsEqualTo(1);
+        await Assert.That(found.Shares.Count).IsGreaterThanOrEqualTo(1); // at least the owner share
+    }
+
+    [Test]
     public async Task GetList_ReturnsCorrectList()
     {
         var created = await _api.CreateListAsync(new CreateListRequest { Name = TestPrefix + "GetList" });
