@@ -14,7 +14,7 @@ public class ShoppingItem
 
     public string Amount { get; init; } = string.Empty;
     public string Unit { get; init; } = string.Empty;
-    public string Price { get; init; } = string.Empty;
+    public decimal? Price { get; init; }
     public string Description { get; init; } = string.Empty;
     public long CategoryId { get; init; }
 }

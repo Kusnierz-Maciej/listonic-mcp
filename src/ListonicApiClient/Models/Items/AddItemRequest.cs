@@ -14,7 +14,7 @@ public class AddItemRequest
     public string? Unit { get; init; }
 
     [JsonPropertyName("price")]
-    public string? Price { get; init; }
+    public decimal? Price { get; init; }
 
     [JsonPropertyName("description")]
     public string? Description { get; init; }
