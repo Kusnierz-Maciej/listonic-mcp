@@ -16,7 +16,7 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
 
     public record EditItemInput(
         [property: Description("Item ID (from get_items)")] string ItemId,
-        [property: Description("The item's current name exactly as get_items shows it - when several rows share that name, add the quantity, e.g. \"kefir (0.5 l)\". Shown in the permission prompt so the user can confirm the right item; not sent to the API. Use the current name even when renaming.")] string ConfirmName,
+        [property: Description("The item's current name exactly as get_items shows it - when several rows share that name, add the quantity, e.g. \"kefir (0.5 l)\", and \"[x]\" for a checked row if that's still ambiguous. Shown in the permission prompt so the user can confirm the right item; not sent to the API. Use the current name even when renaming.")] string ConfirmName,
         [property: Description("true = bought / ticked off, false = back to still to buy")] bool? IsChecked = null,
         [property: Description("New item name")] string? Name = null,
         [property: Description("New amount as a number, e.g. 2, 0.5. Send 0 to clear. Leave null to keep existing.")] decimal? Amount = null,
@@ -24,7 +24,7 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
 
     public record DeleteItemInput(
         [property: Description("Item ID (from get_items)")] string ItemId,
-        [property: Description("The item's current name exactly as get_items shows it - when several rows share that name, add the quantity, e.g. \"kefir (0.5 l)\". Shown in the permission prompt so the user can confirm the right item; not sent to the API.")] string ConfirmName);
+        [property: Description("The item's current name exactly as get_items shows it - when several rows share that name, add the quantity, e.g. \"kefir (0.5 l)\", and \"[x]\" for a checked row if that's still ambiguous. Shown in the permission prompt so the user can confirm the right item; not sent to the API.")] string ConfirmName);
 
     [McpServerTool(Name = "get_lists")]
     [Description("List every shopping list the user can access (own and shared). Returns one line per list as \"[listId] name (private|shared) - N unchecked\". Call this first - every other tool needs a listId from here. Match the user's wording to a list name; if more than one list could fit, ask which one. This server has no categories or item notes and can't create lists or move items between lists - say so instead of looking for another tool.")]
@@ -57,7 +57,7 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
         "Several rows can share a name. When the user names such an item, tick or untick every row the change applies to (only unchecked rows when ticking off). Before deleting it or changing its amount, consider only unchecked rows unless the user means a checked one: if one row matches, act on it; if several match, ask which one.")]
     public async Task<string> GetItemsAsync(
         [Description("The list ID (from get_lists)")] string listId,
-        [Description("The list's name exactly as get_lists shows it. Shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string? listName = null,
+        [Description("The list's name exactly as get_lists shows it. Shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,
         CancellationToken ct = default)
     {
         var items = await accessor.Api.GetItemsAsync(listId, ct);
@@ -171,7 +171,7 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
     [Description("Rename an existing shopping list. On a shared list the new name is visible to everyone who shares it. This server can't create lists - tell the user to do that in the Listonic app.")]
     public async Task<string> RenameListAsync(
         [Description("The list ID (from get_lists)")] string listId,
-        [Description("The list's name exactly as get_lists shows it. Shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,
+        [Description("The list's current name exactly as get_lists shows it (not the new name). Shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,
         [Description("New name for the list")] string name,
         CancellationToken ct = default)
     {
