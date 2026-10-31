@@ -115,4 +115,25 @@ public sealed class ListonicTools(IListonicApi api)
         }
         return $"Deleted {count} item(s).";
     }
+
+    [McpServerTool(Name = "rename_list")]
+    [Description("Rename a shopping list.")]
+    public async Task<string> RenameListAsync(
+        [Description("The list ID (from get_lists)")] string listId,
+        [Description("New name for the list")] string name,
+        CancellationToken ct = default)
+    {
+        await api.RenameListAsync(listId, new ListonicApiClient.Models.Lists.RenameListRequest { Id = listId, Name = name }, ct);
+        return $"List {listId} renamed to \"{name}\".";
+    }
+
+    [McpServerTool(Name = "delete_list")]
+    [Description("Move a shopping list to trash (soft delete).")]
+    public async Task<string> DeleteListAsync(
+        [Description("The list ID (from get_lists)")] string listId,
+        CancellationToken ct = default)
+    {
+        await api.DeleteListAsync(listId, ct);
+        return $"List {listId} moved to trash.";
+    }
 }

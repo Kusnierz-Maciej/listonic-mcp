@@ -28,6 +28,10 @@ public interface IListonicApi
     [Delete("/lists/{listId}")]
     Task DeleteListAsync(string listId, CancellationToken ct = default);
 
+    /// <summary>Renames a list.</summary>
+    [Patch("/lists/{listId}")]
+    Task RenameListAsync(string listId, [Body] RenameListRequest request, CancellationToken ct = default);
+
     /// <summary>Returns all items on a list. <see cref="ShoppingItem.Checked"/> indicates whether the item has been bought.</summary>
     [Get("/lists/{listId}/items")]
     Task<List<ShoppingItem>> GetItemsAsync(string listId, CancellationToken ct = default);

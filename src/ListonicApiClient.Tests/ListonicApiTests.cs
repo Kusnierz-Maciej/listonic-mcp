@@ -1,6 +1,5 @@
 using ListonicApiClient.Models.Items;
 using ListonicApiClient.Models.Lists;
-using ListonicApiClient.Models.Login;
 
 namespace ListonicApiClient.Tests;
 
@@ -66,6 +65,17 @@ public class ListonicApiTests
 
         var lists = await _api.GetListsAsync(new GetListsRequest());
         await Assert.That(lists.Any(l => l.Id == created.Id)).IsFalse();
+    }
+
+    [Test]
+    public async Task RenameList_UpdatesName()
+    {
+        var created = await _api.CreateListAsync(new CreateListRequest { Name = TestPrefix + "RenameList" });
+
+        await _api.RenameListAsync(created.Id, new RenameListRequest { Id = created.Id, Name = TestPrefix + "RenameList-Renamed" });
+
+        var list = await _api.GetListAsync(created.Id);
+        await Assert.That(list.Name).IsEqualTo(TestPrefix + "RenameList-Renamed");
     }
 
     [Test]

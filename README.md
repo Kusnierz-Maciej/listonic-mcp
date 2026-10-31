@@ -11,6 +11,8 @@ Unofficial MCP server for [Listonic](https://listonic.com) grocery lists, built 
 | `add_items` | Add one or many items in a single call |
 | `edit_items` | Check/uncheck, rename, or change quantity (batched) |
 | `delete_items` | Permanently remove items |
+| `rename_list` | Rename a shopping list |
+| `delete_list` | Move a list to trash (soft delete) |
 
 ## Running the MCP server
 
