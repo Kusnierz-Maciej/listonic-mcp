@@ -94,13 +94,16 @@ public class ListonicApiTests
     {
         var list = await _api.CreateListAsync(new CreateListRequest { Name = TestPrefix + "AddItemFull" });
 
-        var item = await _api.AddItemAsync(list.Id, new AddItemRequest
+        var added = await _api.AddItemAsync(list.Id, new AddItemRequest
         {
             Name        = "Eggs",
             Quantity    = "12",
             Unit        = "pcs",
             Description = "free range"
         });
+
+        // Re-fetch — the add response doesn't always populate all fields
+        var item = (await _api.GetItemsAsync(list.Id)).Single(i => i.Id == added.Id);
 
         await Assert.That(item.Name).IsEqualTo("Eggs");
         await Assert.That(item.Amount).IsEqualTo("12");
@@ -126,10 +129,10 @@ public class ListonicApiTests
         var list = await _api.CreateListAsync(new CreateListRequest { Name = TestPrefix + "UpdateItemCheck" });
         var item = await _api.AddItemAsync(list.Id, new AddItemRequest { Name = "Butter" });
 
-        await _api.UpdateItemAsync(list.Id, item.Id, new UpdateItemRequest { IsChecked = true });
+        await _api.UpdateItemAsync(list.Id, item.Id, new UpdateItemRequest { IsChecked = 1 });
 
         var items = await _api.GetItemsAsync(list.Id);
-        await Assert.That(items.Single(i => i.Id == item.Id).Checked).IsEqualTo("1");
+        await Assert.That(items.Single(i => i.Id == item.Id).Checked).IsEqualTo(1);
     }
 
     [Test]

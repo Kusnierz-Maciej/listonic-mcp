@@ -8,7 +8,7 @@ namespace ListonicApiClient;
 public interface IListonicApi
 {
     [Post("/loginextended?provider=password&autoMerge=1&autoDestruct=1")]
-    [Headers("clientauthorization: Bearer bGlzdG9uaWN2MjpqZmRmc29qOTg3NGpkZmhqa2gzNGpraGZmZGZmZg==")]
+    [Headers("clientauthorization: Bearer bGlzdG9uaWN2MjpmamRmc29qOTg3NGpkZmhqa2gzNGpraGZmZGZmZg==")]
     Task<LoginResponse> LoginAsync([Body(BodySerializationMethod.UrlEncoded)] LoginRequest request, CancellationToken ct = default);
 
     [Get("/lists")]
