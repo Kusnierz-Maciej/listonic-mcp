@@ -89,7 +89,17 @@ gh release create v1.3.3 --title "v1.3.3" --notes "$(cat <<'EOF'
 
 ## Image
 
+### Release v1.3.3
+
+[![Docker images](https://img.shields.io/badge/Docker_images-v1.3.3-blue?logo=docker)](https://github.com/Kusnierz-Maciej/listonic-mcp/pkgs/container/listonic-mcp?tag=v1.3.3)
+
     docker pull ghcr.io/kusnierz-maciej/listonic-mcp:v1.3.3
+
+### Latest
+
+[![Docker images](https://img.shields.io/badge/Docker_images-latest-blue?logo=docker)](https://github.com/Kusnierz-Maciej/listonic-mcp/pkgs/container/listonic-mcp?tag=latest)
+
+    docker pull ghcr.io/kusnierz-maciej/listonic-mcp:latest
 EOF
 )"
 ```
