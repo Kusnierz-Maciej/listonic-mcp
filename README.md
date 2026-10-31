@@ -79,10 +79,15 @@ services:
     restart: unless-stopped
 ```
 
-**2. Create a `.env` next to it** (fill in email, password, and a strong random API key):
+**2. Create a `.env` next to it:**
 
 ```
-Security__ApiKey=your-strong-random-key
+# Required: gates access to the server. Any long random string works — a GUID is a good choice.
+# Generate one with:  uuidgen   (macOS/Linux)   or   [guid]::NewGuid()  (PowerShell)
+Security__ApiKey=00000000-0000-0000-0000-000000000000
+
+# Optional: a default Listonic account, used only when a client does not send its
+# own Authorization: Basic header. Omit both lines if every client passes credentials.
 Listonic__Email=your@email.com
 Listonic__Password=yourpassword
 ```
@@ -139,10 +144,15 @@ services:
     restart: unless-stopped
 ```
 
-**3. Put a `.env` in the same folder** (fill in email, password, and a strong random API key):
+**3. Put a `.env` in the same folder:**
 
 ```
-Security__ApiKey=your-strong-random-key
+# Required: gates access to the server. Any long random string works — a GUID is a good choice.
+# Generate one with:  uuidgen   (macOS/Linux)   or   [guid]::NewGuid()  (PowerShell)
+Security__ApiKey=00000000-0000-0000-0000-000000000000
+
+# Optional: a default Listonic account, used only when a client does not send its
+# own Authorization: Basic header. Omit both lines if every client passes credentials.
 Listonic__Email=your@email.com
 Listonic__Password=yourpassword
 ```
@@ -167,33 +177,13 @@ The server must be publicly reachable from the internet. If it's on a local NAS,
 
 ## Running tests
 
-Tests hit the real Listonic API, so credentials are required. They are never stored in the repo.
-
-### Local
+The tests run against the live Listonic API to detect whether the unofficial API has changed in a way that would break this server. They hit the real API, so credentials are required. They are never stored in the repo.
 
 ```bash
 dotnet user-secrets --project src/ListonicApiClient.Tests set "Listonic:Email" "your@email.com"
 dotnet user-secrets --project src/ListonicApiClient.Tests set "Listonic:Password" "yourpassword"
 
 dotnet test src/ListonicMcp.slnx
-```
-
-### GitHub Actions
-
-Add two repository secrets:
-
-| Secret name | Value |
-|---|---|
-| `LISTONIC__EMAIL` | test account email |
-| `LISTONIC__PASSWORD` | test account password |
-
-Then in your workflow:
-
-```yaml
-- run: dotnet test src/ListonicMcp.slnx
-  env:
-    LISTONIC__EMAIL: ${{ secrets.LISTONIC__EMAIL }}
-    LISTONIC__PASSWORD: ${{ secrets.LISTONIC__PASSWORD }}
 ```
 
 > Tests create lists prefixed with `[test] ` and clean them up automatically after each run.
