@@ -20,7 +20,7 @@ Set credentials via user secrets (never stored in the repo):
 
 ```bash
 dotnet user-secrets --project src/ListonicMcp set "Listonic:Email" "your@email.com"
-dotnet user-secrets --project src/ListonicMcp set "Listonic:Password" "yourpassword"
+dotnet user-secrets --project src/ListonicMcp set "Listonic:Password" 'yourpassword'
 
 dotnet run --project src/ListonicMcp
 # Server starts at http://localhost:5100
@@ -72,6 +72,7 @@ docker load < listonic-mcp-v1.0.0.tar.gz
 ```bash
 cp src/ListonicMcp/docker/.env.example src/ListonicMcp/docker/.env
 # Edit .env — fill in email, password, and a strong random API key
+# Wrap values in single quotes to avoid issues with special characters: PASSWORD='p@$$w0rd!'
 ```
 
 **3. Start the container:**
@@ -122,7 +123,7 @@ Tests hit the real Listonic API, so credentials are required. They are never sto
 
 ```bash
 dotnet user-secrets --project src/ListonicApiClient.Tests set "Listonic:Email" "your@email.com"
-dotnet user-secrets --project src/ListonicApiClient.Tests set "Listonic:Password" "yourpassword"
+dotnet user-secrets --project src/ListonicApiClient.Tests set "Listonic:Password" 'yourpassword'
 
 dotnet test src/ListonicMcp.slnx
 ```
