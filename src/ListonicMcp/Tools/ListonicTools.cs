@@ -16,10 +16,15 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
 
     public record EditItemInput(
         [property: Description("Item ID (from get_items)")] string ItemId,
+        [property: Description("Item name — shown in the permission prompt so the user can confirm the right item is being changed; not sent to the API.")] string? ConfirmName = null,
         [property: Description("true = bought / ticked off, false = back to still to buy")] bool? IsChecked = null,
         [property: Description("New item name")] string? Name = null,
         [property: Description("New amount as a number, e.g. 2, 0.5. Send 0 to clear. Leave null to keep existing.")] decimal? Amount = null,
         [property: Description("Free-text unit shown in the app, e.g. 'kg', 'g', 'l', 'szt.'. Send \"\" to clear. Leave null to keep existing.")] string? Unit = null);
+
+    public record DeleteItemInput(
+        [property: Description("Item ID (from get_items)")] string ItemId,
+        [property: Description("Item name — shown in the permission prompt so the user can confirm the right item is being deleted; not sent to the API.")] string ConfirmName);
 
     [McpServerTool(Name = "get_lists")]
     [Description("List every shopping list the user can access (own and shared). Returns one line per list as \"[listId] name (private|shared) — N unchecked\". Call this first — every other tool needs a listId from here. Match the user's wording to a list name; if more than one list could fit, ask which one.")]
@@ -137,10 +142,10 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
         "Permanently delete items from a list; this can't be undone. To mark something as bought, tick it off with edit_items instead. " +
         "Use this when the user wants an item gone (added by mistake, no longer needed) or asks to clear bought items — then delete only the checked ones. " +
         "Before deleting more than a few items or emptying a whole list, confirm with the user. " +
-        "Get itemIds from get_items. Returns the deleted items in get_items format.")]
+        "Get itemIds from get_items. Always pass confirmName alongside each itemId. Returns the deleted items in get_items format.")]
     public async Task<string> DeleteItemsAsync(
         [Description("The list ID (from get_lists)")] string listId,
-        [Description("Item IDs to delete (from get_items)")] List<string> itemIds,
+        [Description("Items to delete (from get_items)")] List<DeleteItemInput> items,
         CancellationToken ct = default)
     {
         var api = accessor.Api;
@@ -148,12 +153,12 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
         var itemById = allItems.ToDictionary(i => i.Id);
 
         var deleted = new List<string>();
-        foreach (var itemId in itemIds)
+        foreach (var item in items)
         {
-            await api.DeleteItemAsync(listId, itemId, ct);
-            deleted.Add(itemById.TryGetValue(itemId, out var item)
-                ? FormatItem(item)
-                : $"[ ] [{itemId}]");
+            await api.DeleteItemAsync(listId, item.ItemId, ct);
+            deleted.Add(itemById.TryGetValue(item.ItemId, out var si)
+                ? FormatItem(si)
+                : $"[ ] [{item.ItemId}] {item.ConfirmName}");
         }
         return deleted.Count > 0 ? string.Join("\n", deleted) : "No items deleted.";
     }
