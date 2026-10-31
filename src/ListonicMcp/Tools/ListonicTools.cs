@@ -11,24 +11,24 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
 {
     public record AddItemInput(
         [property: Description("Product name in the user's language, e.g. \"mleko\". No quantity inside the name.")] string Name,
-        [property: Description("Quantity as a number, e.g. 2, 0.5, 500. Accepts comma decimals like 0,5. Leave null if no quantity.")] decimal? Amount = null,
+        [property: Description("Quantity as a number, e.g. 2, 0.5, 500 (dot as decimal separator). Leave null if no quantity.")] decimal? Amount = null,
         [property: Description("Free-text unit shown in the app, e.g. 'kg', 'g', 'l', 'szt.'. Leave null for plain counts or no quantity.")] string? Unit = null);
 
     public record EditItemInput(
         [property: Description("Item ID (from get_items)")] string ItemId,
         [property: Description("true = bought / ticked off, false = back to still to buy")] bool? IsChecked = null,
         [property: Description("New item name")] string? Name = null,
-        [property: Description("New amount as a number, e.g. 2, 0.5. Accepts comma decimals. Leave null to keep existing.")] decimal? Amount = null,
-        [property: Description("Free-text unit shown in the app, e.g. 'kg', 'g', 'l', 'szt.'. Leave null to keep existing.")] string? Unit = null);
+        [property: Description("New amount as a number, e.g. 2, 0.5 (dot as decimal separator). Send 0 to clear. Leave null to keep existing.")] decimal? Amount = null,
+        [property: Description("Free-text unit shown in the app, e.g. 'kg', 'g', 'l', 'szt.'. Send \"\" to clear. Leave null to keep existing.")] string? Unit = null);
 
     [McpServerTool(Name = "get_lists")]
-    [Description("List every shopping list the user can access (own and shared). Returns one line per list as \"[listId] name\". Call this first — every other tool needs a listId from here. Match the user's wording to a list name; if more than one list could fit, ask which one.")]
+    [Description("List every shopping list the user can access (own and shared). Returns one line per list as \"[listId] name (private|shared) — N unchecked\". Call this first — every other tool needs a listId from here. Match the user's wording to a list name; if more than one list could fit, ask which one.")]
     public async Task<string> GetListsAsync(CancellationToken ct = default)
     {
         var api = accessor.Api;
         var lists = await api.GetListsAsync(new GetListsRequest
         {
-            IncludeShares = false,
+            IncludeShares = true,
             Archive = false,
             IncludeItems = false,
         }, ct);
@@ -36,11 +36,16 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
         if (lists.Count == 0)
             return "No lists found.";
 
-        return string.Join("\n", lists.Select(l => $"[{l.Id}] {l.Name}"));
+        return string.Join("\n", lists.Select(l =>
+        {
+            var shared = l.Shares.Count > 1 ? "shared" : "private";
+            var unchecked_ = l.ItemsCount - l.CheckedItemsCount;
+            return $"[{l.Id}] {l.Name} ({shared}) — {unchecked_} unchecked";
+        }));
     }
 
     [McpServerTool(Name = "get_items")]
-    [Description("Get every item on one list, one per line as \"[ ] [itemId] name (amount unit)\" (unchecked, still to buy) or \"[x] …\" (checked: bought / ticked off in the app). When the user asks what to buy or what's on the list, report the unchecked items; mention checked ones only if asked. Call this before edit_items or delete_items to get itemIds, and before add_items to avoid adding an item that is already on the list.")]
+    [Description("Get every item on one list, one per line as \"[ ] [itemId] name (amount unit)\" (unchecked, still to buy) or \"[x] …\" (checked: bought / ticked off in the app). When the user asks what to buy or what's on the list, report the unchecked items; mention checked ones only if asked. Call this before edit_items or delete_items to get itemIds, and before add_items to avoid adding an item that is already on the list. Items come in the app's order (new items near the top). Several rows can share a name; when the user names such an item, act on all of them or ask which one.")]
     public async Task<string> GetItemsAsync(
         [Description("The list ID (from get_lists)")] string listId,
         CancellationToken ct = default)
@@ -84,7 +89,7 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
     }
 
     [McpServerTool(Name = "edit_items")]
-    [Description("Change items already on a list: tick them off when bought (isChecked: true), untick them (false), rename them or change their amount/unit. Send only the fields to change; omitted or null fields stay as they are. Get itemIds from get_items. Items can't be moved between lists: add them to the target list and delete them from the source. Returns the updated items in get_items format.")]
+    [Description("Change items already on a list: tick them off when bought (isChecked: true), untick them (false), rename them or change their amount/unit. Send only the fields to change; omitted or null fields stay as they are; send amount 0 and unit \"\" to clear the quantity. Get itemIds from get_items. Items can't be moved between lists: add them to the target list and delete them from the source. Returns the updated items in get_items format.")]
     public async Task<string> EditItemsAsync(
         [Description("The list ID (from get_lists)")] string listId,
         [Description("Items to edit")] List<EditItemInput> items,
@@ -115,24 +120,28 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
     }
 
     [McpServerTool(Name = "delete_items")]
-    [Description("Permanently delete items from a list; this can't be undone. To mark something as bought, tick it off with edit_items instead. Use this when the user wants an item gone (added by mistake, no longer needed) or asks to clear bought items — then delete only the checked ones. Before deleting more than a few items or emptying a whole list, confirm with the user. Get itemIds from get_items.")]
+    [Description("Permanently delete items from a list; this can't be undone. To mark something as bought, tick it off with edit_items instead. Use this when the user wants an item gone (added by mistake, no longer needed) or asks to clear bought items — then delete only the checked ones. Before deleting more than a few items or emptying a whole list, confirm with the user. Get itemIds from get_items. Returns one line per deleted item: \"Deleted [itemId] name\".")]
     public async Task<string> DeleteItemsAsync(
         [Description("The list ID (from get_lists)")] string listId,
         [Description("Item IDs to delete (from get_items)")] List<string> itemIds,
         CancellationToken ct = default)
     {
         var api = accessor.Api;
-        int count = 0;
+        var allItems = await api.GetItemsAsync(listId, ct);
+        var nameById = allItems.ToDictionary(i => i.Id, i => i.Name);
+
+        var deleted = new List<string>();
         foreach (var itemId in itemIds)
         {
             await api.DeleteItemAsync(listId, itemId, ct);
-            count++;
+            var name = nameById.TryGetValue(itemId, out var n) ? n : itemId;
+            deleted.Add($"Deleted [{itemId}] {name}");
         }
-        return $"Deleted {count} item(s).";
+        return deleted.Count > 0 ? string.Join("\n", deleted) : "No items deleted.";
     }
 
     [McpServerTool(Name = "rename_list")]
-    [Description("Rename an existing shopping list. On a shared list the new name is visible to everyone who shares it. This server can't create lists — tell the user to do that in the Listonic app.")]
+    [Description("Rename an existing shopping list. On a shared list the new name is visible to everyone who shares it. This server can't create or delete lists — tell the user to do that in the Listonic app.")]
     public async Task<string> RenameListAsync(
         [Description("The list ID (from get_lists)")] string listId,
         [Description("New name for the list")] string name,

@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using ListonicApiClient.Models.Items;
 
 namespace ListonicApiClient.Models.Lists;
@@ -8,5 +9,24 @@ public class ShoppingList
     public string Name { get; init; } = string.Empty;
     public int Active { get; init; }
     public int Deleted { get; init; }
+
+    [JsonPropertyName("IsOwner")]
+    public int IsOwner { get; init; }
+
+    [JsonPropertyName("ItemsCount")]
+    public int ItemsCount { get; init; }
+
+    [JsonPropertyName("CheckedItemsCount")]
+    public int CheckedItemsCount { get; init; }
+
+    [JsonPropertyName("Shares")]
+    public List<ListShare> Shares { get; init; } = [];
+
     public List<ShoppingItem> Items { get; init; } = [];
+}
+
+public class ListShare
+{
+    [JsonPropertyName("Owner")]
+    public int Owner { get; init; }
 }
