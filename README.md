@@ -57,11 +57,14 @@ dotnet publish src/ListonicMcp/ListonicMcp.csproj \
 **1b. (Optional) Export the image as a tarball for transfer to a NAS:**
 
 ```bash
-docker save listonic-mcp:latest | gzip > listonic-mcp.tar.gz
+# Save with version suffix
+docker save listonic-mcp:latest | gzip > listonic-mcp-v1.0.0.tar.gz
+
 # Copy to NAS
-scp listonic-mcp.tar.gz user@nas:/path/to/deploy/
+scp listonic-mcp-v1.0.0.tar.gz user@nas:/path/to/deploy/
+
 # Load on NAS
-docker load < listonic-mcp.tar.gz
+docker load < listonic-mcp-v1.0.0.tar.gz
 ```
 
 **2. Configure credentials and API key:**
