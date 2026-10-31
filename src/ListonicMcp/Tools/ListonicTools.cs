@@ -16,7 +16,7 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
 
     public record EditItemInput(
         [property: Description("Item ID (from get_items)")] string ItemId,
-        [property: Description("Item name — shown in the permission prompt so the user can confirm the right item is being changed; not sent to the API.")] string? ConfirmName = null,
+        [property: Description("The item's current name exactly as get_items shows it - when several rows share that name, add the quantity, e.g. \"kefir (0.5 l)\". Shown in the permission prompt so the user can confirm the right item; not sent to the API. Use the current name even when renaming.")] string ConfirmName,
         [property: Description("true = bought / ticked off, false = back to still to buy")] bool? IsChecked = null,
         [property: Description("New item name")] string? Name = null,
         [property: Description("New amount as a number, e.g. 2, 0.5. Send 0 to clear. Leave null to keep existing.")] decimal? Amount = null,
@@ -24,10 +24,10 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
 
     public record DeleteItemInput(
         [property: Description("Item ID (from get_items)")] string ItemId,
-        [property: Description("Item name — shown in the permission prompt so the user can confirm the right item is being deleted; not sent to the API.")] string ConfirmName);
+        [property: Description("The item's current name exactly as get_items shows it - when several rows share that name, add the quantity, e.g. \"kefir (0.5 l)\". Shown in the permission prompt so the user can confirm the right item; not sent to the API.")] string ConfirmName);
 
     [McpServerTool(Name = "get_lists")]
-    [Description("List every shopping list the user can access (own and shared). Returns one line per list as \"[listId] name (private|shared) — N unchecked\". Call this first — every other tool needs a listId from here. Match the user's wording to a list name; if more than one list could fit, ask which one.")]
+    [Description("List every shopping list the user can access (own and shared). Returns one line per list as \"[listId] name (private|shared) - N unchecked\". Call this first - every other tool needs a listId from here. Match the user's wording to a list name; if more than one list could fit, ask which one. This server has no categories or item notes and can't create lists or move items between lists - say so instead of looking for another tool.")]
     public async Task<string> GetListsAsync(CancellationToken ct = default)
     {
         var api = accessor.Api;
@@ -45,7 +45,7 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
         {
             var shared = l.Shares.Count > 1 ? "shared" : "private";
             var unchecked_ = l.ItemsCount - l.CheckedItemsCount;
-            return $"[{l.Id}] {l.Name} ({shared}) — {unchecked_} unchecked";
+            return $"[{l.Id}] {l.Name} ({shared}) - {unchecked_} unchecked";
         }));
     }
 
@@ -54,10 +54,10 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
         "Get every item on one list. Unchecked items (still to buy) come first, then checked ones (bought / ticked off), each as \"[ ] [itemId] name (amount unit)\" or \"[x] …\". " +
         "When the user asks what to buy, report only unchecked items; mention checked ones only if asked. " +
         "Call this before edit_items or delete_items to get itemIds, and before add_items to avoid duplicates. " +
-        "Several rows can share a name. When the user names such an item, tick or untick every row the change applies to (only unchecked rows when ticking off); ask which one before deleting it or changing its amount (consider only unchecked rows unless the user means a checked one).")]
+        "Several rows can share a name. When the user names such an item, tick or untick every row the change applies to (only unchecked rows when ticking off). Before deleting it or changing its amount, consider only unchecked rows unless the user means a checked one: if one row matches, act on it; if several match, ask which one.")]
     public async Task<string> GetItemsAsync(
         [Description("The list ID (from get_lists)")] string listId,
-        [Description("List name — shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string? listName = null,
+        [Description("The list's name exactly as get_lists shows it. Shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string? listName = null,
         CancellationToken ct = default)
     {
         var items = await accessor.Api.GetItemsAsync(listId, ct);
@@ -71,12 +71,12 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
     [McpServerTool(Name = "add_items")]
     [Description(
         "Add one or more items to a list in a single call; new items start unchecked. " +
-        "Put only the product in name (in the user's language, e.g. \"mleko\"), the number in amount and the unit in unit — never the quantity inside the name. " +
-        "Before adding, call get_items and check whether the item already exists. If it does, untick it if it's checked, and ask whether to add to its amount or replace it, instead of creating a duplicate. " +
+        "Put only the product in name (in the user's language, e.g. \"mleko\"), the number in amount and the unit in unit - never the quantity inside the name. " +
+        "Before adding, call get_items and check whether the item already exists. If it's checked, untick it and set the amount the user gave. If it's unchecked, ask whether to add to its amount or replace it. Don't create a duplicate row. " +
         "Returns the added items in get_items format.")]
     public async Task<string> AddItemsAsync(
         [Description("The list ID (from get_lists)")] string listId,
-        [Description("List name — shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,
+        [Description("The list's name exactly as get_lists shows it. Shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,
         [Description("Items to add")] List<AddItemInput> items,
         CancellationToken ct = default)
     {
@@ -108,11 +108,11 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
         "Change items already on a list: tick them off when bought (isChecked: true), untick (false), rename, or change amount/unit. " +
         "\"I bought X\" = tick it off, do not delete. " +
         "Send only the fields to change; omitted or null fields stay as they are; send amount 0 and unit \"\" to clear the quantity. " +
-        "Get itemIds from get_items. Items can't be moved between lists — add to target list and delete from source. " +
+        "Get itemIds from get_items. Items can't be moved between lists - add to target list and delete from source. " +
         "Batch: send all items to change in one call. Returns the updated items in get_items format.")]
     public async Task<string> EditItemsAsync(
         [Description("The list ID (from get_lists)")] string listId,
-        [Description("List name — shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,
+        [Description("The list's name exactly as get_lists shows it. Shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,
         [Description("Items to edit")] List<EditItemInput> items,
         CancellationToken ct = default)
     {
@@ -143,12 +143,12 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
     [McpServerTool(Name = "delete_items")]
     [Description(
         "Permanently delete items from a list; this can't be undone. To mark something as bought, tick it off with edit_items instead. " +
-        "Use this when the user wants an item gone (added by mistake, no longer needed) or asks to clear bought items — then delete only the checked ones. " +
+        "Use this when the user wants an item gone (added by mistake, no longer needed) or asks to clear bought items - then delete only the checked ones. " +
         "Before deleting more than a few items or emptying a whole list, confirm with the user. " +
         "Get itemIds from get_items. Always pass confirmName alongside each itemId. Returns the deleted items in get_items format.")]
     public async Task<string> DeleteItemsAsync(
         [Description("The list ID (from get_lists)")] string listId,
-        [Description("List name — shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,
+        [Description("The list's name exactly as get_lists shows it. Shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,
         [Description("Items to delete (from get_items)")] List<DeleteItemInput> items,
         CancellationToken ct = default)
     {
@@ -168,10 +168,10 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
     }
 
     [McpServerTool(Name = "rename_list")]
-    [Description("Rename an existing shopping list. On a shared list the new name is visible to everyone who shares it. This server can't create lists — tell the user to do that in the Listonic app.")]
+    [Description("Rename an existing shopping list. On a shared list the new name is visible to everyone who shares it. This server can't create lists - tell the user to do that in the Listonic app.")]
     public async Task<string> RenameListAsync(
         [Description("The list ID (from get_lists)")] string listId,
-        [Description("List name — shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,
+        [Description("The list's name exactly as get_lists shows it. Shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,
         [Description("New name for the list")] string name,
         CancellationToken ct = default)
     {
@@ -180,10 +180,10 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
     }
 
     [McpServerTool(Name = "delete_list")]
-    [Description("Move a whole shopping list to the Listonic trash; it can be restored from the trash in the app. On a shared list this removes it for everyone who shares it — get_lists shows whether a list is shared. Always confirm with the user, naming the list, before calling. To delete items but keep the list, use delete_items instead.")]
+    [Description("Move a whole shopping list to the Listonic trash; it can be restored from the trash in the app. On a shared list this removes it for everyone who shares it - get_lists shows whether a list is shared. Always confirm with the user, naming the list, before calling. To delete items but keep the list, use delete_items instead.")]
     public async Task<string> DeleteListAsync(
         [Description("The list ID (from get_lists)")] string listId,
-        [Description("List name — shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,
+        [Description("The list's name exactly as get_lists shows it. Shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,
         CancellationToken ct = default)
     {
         await accessor.Api.DeleteListAsync(listId, ct);
