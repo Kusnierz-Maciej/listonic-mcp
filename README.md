@@ -43,7 +43,7 @@ Connect Claude Code by adding to your MCP config (`.mcp.json` in the project roo
 }
 ```
 
-Alternatively, skip user secrets entirely and pass credentials as headers (useful when testing multi-account):
+Alternatively, skip user secrets entirely and pass credentials as a Basic auth header (useful when testing multi-account):
 
 ```json
 {
@@ -52,8 +52,7 @@ Alternatively, skip user secrets entirely and pass credentials as headers (usefu
       "type": "http",
       "url": "http://localhost:5100/mcp",
       "headers": {
-        "X-Listonic-Email": "your@listonic-account.com",
-        "X-Listonic-Password": "your-listonic-password"
+        "Authorization": "Basic <base64(email:password)>"
       }
     }
   }
@@ -114,18 +113,17 @@ docker compose \
       "type": "http",
       "url": "http://your-host:9011/mcp",
       "headers": {
-        "Authorization": "Bearer your-api-key-from-.env",
-        "X-Listonic-Email": "your@listonic-account.com",
-        "X-Listonic-Password": "your-listonic-password"
+        "X-Api-Key": "your-api-key-from-.env",
+        "Authorization": "Basic <base64(email:password)>"
       }
     }
   }
 }
 ```
 
-The `Authorization: Bearer` value must match `Security__ApiKey` in your `.env` file.
+`X-Api-Key` must match `Security__ApiKey` in your `.env` file.
 
-`X-Listonic-Email` and `X-Listonic-Password` identify which Listonic account to use. If omitted, the server falls back to the `Listonic__Email`/`Listonic__Password` values in `.env`. This means multiple users can share one server instance, each passing their own credentials in headers — no server restart or config change required to add a new account.
+`Authorization: Basic` carries Listonic credentials encoded as `base64(email:password)`. If omitted, the server falls back to `Listonic__Email`/`Listonic__Password` from `.env`. This means multiple users can share one server instance, each passing their own credentials — no server restart required to add a new account.
 
 ### Connecting from claude.ai
 
@@ -133,8 +131,8 @@ The `Authorization: Bearer` value must match `Security__ApiKey` in your `.env` f
 2. Enter your server URL: `http://your-host:9011/mcp`
 3. Under **Authentication**, select **No sign-in**
 4. Under **Request headers**, add:
-   - Header name: `Authorization`
-   - Value: `Bearer your-api-key`
+   - `X-Api-Key`: `your-api-key`
+   - `Authorization`: `Basic <base64(email:password)>`
 5. Click **Add**
 
 The server must be publicly reachable from the internet. If it's on a local NAS, expose it via a tunnel such as [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) or ngrok.

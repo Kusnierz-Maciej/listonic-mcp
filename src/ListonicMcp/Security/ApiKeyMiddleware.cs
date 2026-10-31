@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace ListonicMcp.Security;
 
 public class ApiKeyMiddleware
@@ -10,23 +12,19 @@ public class ApiKeyMiddleware
     public ApiKeyMiddleware(RequestDelegate next, IConfiguration configuration)
     {
         _next = next;
-        _apiKey        = configuration["Security:ApiKey"];
-        _fallbackEmail    = configuration["Listonic:Email"];
-        _fallbackPassword = configuration["Listonic:Password"];
+        _apiKey           = NullIfEmpty(configuration["Security:ApiKey"]);
+        _fallbackEmail    = NullIfEmpty(configuration["Listonic:Email"]);
+        _fallbackPassword = NullIfEmpty(configuration["Listonic:Password"]);
     }
+
+    private static string? NullIfEmpty(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value;
 
     public async Task InvokeAsync(HttpContext context)
     {
         if (!string.IsNullOrWhiteSpace(_apiKey))
         {
-            string? provided = null;
-
-            var authHeader = context.Request.Headers.Authorization.FirstOrDefault();
-            if (authHeader is not null && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
-                provided = authHeader["Bearer ".Length..].Trim();
-
-            if (provided is null)
-                provided = context.Request.Headers["X-Api-Key"].FirstOrDefault();
+            var provided = context.Request.Headers["X-Api-Key"].FirstOrDefault();
 
             if (provided != _apiKey)
             {
@@ -36,14 +34,16 @@ public class ApiKeyMiddleware
             }
         }
 
-        var email    = context.Request.Headers["X-Listonic-Email"].FirstOrDefault()    ?? _fallbackEmail;
-        var password = context.Request.Headers["X-Listonic-Password"].FirstOrDefault() ?? _fallbackPassword;
+        var (email, password) = ParseBasicAuth(context.Request.Headers.Authorization.FirstOrDefault());
+
+        email    ??= _fallbackEmail;
+        password ??= _fallbackPassword;
 
         if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
         {
             context.Response.StatusCode = StatusCodes.Status400BadRequest;
             await context.Response.WriteAsync(
-                "Listonic credentials are required. Provide X-Listonic-Email and X-Listonic-Password headers, " +
+                "Listonic credentials are required. Provide an Authorization: Basic header, " +
                 "or configure Listonic:Email and Listonic:Password on the server.");
             return;
         }
@@ -52,5 +52,23 @@ public class ApiKeyMiddleware
         context.Items["listonic-password"] = password;
 
         await _next(context);
+    }
+
+    private static (string? email, string? password) ParseBasicAuth(string? header)
+    {
+        if (header is null || !header.StartsWith("Basic ", StringComparison.OrdinalIgnoreCase))
+            return (null, null);
+
+        try
+        {
+            var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(header["Basic ".Length..].Trim()));
+            var sep = decoded.IndexOf(':');
+            if (sep < 0) return (null, null);
+            return (decoded[..sep], decoded[(sep + 1)..]);
+        }
+        catch
+        {
+            return (null, null);
+        }
     }
 }

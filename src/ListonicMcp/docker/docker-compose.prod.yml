@@ -4,9 +4,8 @@ services:
     image: listonic-mcp:latest
     ports:
       - "9011:8080"
+    env_file:
+      - .env
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
-      - Listonic__Email=${Listonic__Email}
-      - Listonic__Password=${Listonic__Password}
-      - Security__ApiKey=${Security__ApiKey}
     restart: unless-stopped
