@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using ListonicApiClient.Converters;
 
 namespace ListonicApiClient.Models.Items;
 
@@ -8,7 +9,8 @@ public class AddItemRequest
     public string Name { get; init; } = string.Empty;
 
     [JsonPropertyName("amount")]
-    public string? Quantity { get; init; }
+    [JsonConverter(typeof(DecimalStringConverter))]
+    public decimal? Quantity { get; init; }
 
     [JsonPropertyName("unit")]
     public string? Unit { get; init; }

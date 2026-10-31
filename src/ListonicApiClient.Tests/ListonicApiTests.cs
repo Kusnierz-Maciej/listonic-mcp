@@ -107,7 +107,7 @@ public class ListonicApiTests
         var added = await _api.AddItemAsync(list.Id, new AddItemRequest
         {
             Name        = "jajka",
-            Quantity    = "12",
+            Quantity    = 12m,
             Unit        = "szt",
             Description = "od kur z wolnego wybiegu"
         });
@@ -164,12 +164,12 @@ public class ListonicApiTests
         var item = await _api.AddItemAsync(list.Id, new AddItemRequest
         {
             Name     = "ser żółty",
-            Quantity = "500",
+            Quantity = 500m,
             Unit     = "g"
         });
         await _api.UpdateItemAsync(list.Id, item.Id, new UpdateItemRequest { IsChecked = true });
 
-        // Patch only Name — IsChecked, Quantity and Unit are null in the request
+        // Patch only Name — IsChecked, Amount and Unit are null in the request
         await _api.UpdateItemAsync(list.Id, item.Id, new UpdateItemRequest { Name = "ser gouda" });
 
         var updated = (await _api.GetItemsAsync(list.Id)).Single(i => i.Id == item.Id);
@@ -177,6 +177,63 @@ public class ListonicApiTests
         await Assert.That(updated.Checked).IsTrue();   // must not be reset to false by null IsChecked
         await Assert.That(updated.Amount).IsEqualTo("500"); // must not be cleared by null Quantity
         await Assert.That(updated.Unit).IsEqualTo("g");
+    }
+
+    [Test]
+    public async Task AddItem_WithDecimalAmount_SavesAmountAndUnit()
+    {
+        var list = await _api.CreateListAsync(new CreateListRequest { Name = TestPrefix + "AddItemDecimal" });
+
+        var added = await _api.AddItemAsync(list.Id, new AddItemRequest
+        {
+            Name     = "mleko",
+            Quantity = 0.5m,
+            Unit     = "l"
+        });
+
+        var item = (await _api.GetItemsAsync(list.Id)).Single(i => i.Id == added.Id);
+
+        await Assert.That(item.Amount).IsEqualTo("0.5");
+        await Assert.That(item.Unit).IsEqualTo("l");
+    }
+
+    [Test]
+    public async Task UpdateItem_Amount_SavesCorrectly()
+    {
+        var list = await _api.CreateListAsync(new CreateListRequest { Name = TestPrefix + "UpdateItemAmount" });
+        var item = await _api.AddItemAsync(list.Id, new AddItemRequest { Name = "fasola", Quantity = 1m, Unit = "kg" });
+
+        await _api.UpdateItemAsync(list.Id, item.Id, new UpdateItemRequest { Amount = 1.5m });
+
+        var updated = (await _api.GetItemsAsync(list.Id)).Single(i => i.Id == item.Id);
+        await Assert.That(updated.Amount).IsEqualTo("1.5");
+        await Assert.That(updated.Unit).IsEqualTo("kg");
+    }
+
+    [Test]
+    public async Task UpdateItem_Unit_SavesCorrectly()
+    {
+        var list = await _api.CreateListAsync(new CreateListRequest { Name = TestPrefix + "UpdateItemUnit" });
+        var item = await _api.AddItemAsync(list.Id, new AddItemRequest { Name = "mąka", Quantity = 500m, Unit = "g" });
+
+        await _api.UpdateItemAsync(list.Id, item.Id, new UpdateItemRequest { Unit = "dag" });
+
+        var updated = (await _api.GetItemsAsync(list.Id)).Single(i => i.Id == item.Id);
+        await Assert.That(updated.Unit).IsEqualTo("dag");
+        await Assert.That(updated.Amount).IsEqualTo("500");
+    }
+
+    [Test]
+    public async Task UpdateItem_AmountAndUnit_SavesBoth()
+    {
+        var list = await _api.CreateListAsync(new CreateListRequest { Name = TestPrefix + "UpdateItemAmountUnit" });
+        var item = await _api.AddItemAsync(list.Id, new AddItemRequest { Name = "ser" });
+
+        await _api.UpdateItemAsync(list.Id, item.Id, new UpdateItemRequest { Amount = 0.25m, Unit = "kg" });
+
+        var updated = (await _api.GetItemsAsync(list.Id)).Single(i => i.Id == item.Id);
+        await Assert.That(updated.Amount).IsEqualTo("0.25");
+        await Assert.That(updated.Unit).IsEqualTo("kg");
     }
 
     [Test]

@@ -12,6 +12,10 @@ public class UpdateItemRequest
     [JsonPropertyName("name")]
     public string? Name { get; init; }
 
-    [JsonPropertyName("quantity")]
-    public string? Quantity { get; init; }
+    [JsonPropertyName("amount")]
+    [JsonConverter(typeof(DecimalStringConverter))]
+    public decimal? Amount { get; init; }
+
+    [JsonPropertyName("unit")]
+    public string? Unit { get; init; }
 }
