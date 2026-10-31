@@ -4,6 +4,9 @@ namespace ListonicMcp.Security;
 
 public class ApiKeyMiddleware
 {
+    public const string EmailItemKey    = "listonic-email";
+    public const string PasswordItemKey = "listonic-password";
+
     private readonly RequestDelegate _next;
     private readonly string? _apiKey;
     private readonly string? _fallbackEmail;
@@ -36,8 +39,11 @@ public class ApiKeyMiddleware
 
         var (email, password) = ParseBasicAuth(context.Request.Headers.Authorization.FirstOrDefault());
 
-        email    ??= _fallbackEmail;
-        password ??= _fallbackPassword;
+        if (string.IsNullOrWhiteSpace(email) && string.IsNullOrWhiteSpace(password))
+        {
+            email    = _fallbackEmail;
+            password = _fallbackPassword;
+        }
 
         if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
         {
@@ -48,8 +54,8 @@ public class ApiKeyMiddleware
             return;
         }
 
-        context.Items["listonic-email"]    = email;
-        context.Items["listonic-password"] = password;
+        context.Items[EmailItemKey]    = email;
+        context.Items[PasswordItemKey] = password;
 
         await _next(context);
     }
