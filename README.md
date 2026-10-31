@@ -18,7 +18,7 @@ Unofficial MCP server for [Listonic](https://listonic.com) grocery lists, built 
 
 ### Local development
 
-Set credentials via user secrets (never stored in the repo):
+Credentials can be supplied either via user secrets (server-side fallback) or per-request headers. For local dev the simplest approach is user secrets:
 
 ```bash
 dotnet user-secrets --project src/ListonicMcp set "Listonic:Email" "your@email.com"
@@ -38,6 +38,23 @@ Connect Claude Code by adding to your MCP config (`.mcp.json` in the project roo
     "listonic": {
       "type": "http",
       "url": "http://localhost:5100/mcp"
+    }
+  }
+}
+```
+
+Alternatively, skip user secrets entirely and pass credentials as headers (useful when testing multi-account):
+
+```json
+{
+  "mcpServers": {
+    "listonic": {
+      "type": "http",
+      "url": "http://localhost:5100/mcp",
+      "headers": {
+        "X-Listonic-Email": "your@listonic-account.com",
+        "X-Listonic-Password": "your-listonic-password"
+      }
     }
   }
 }
@@ -97,7 +114,9 @@ docker compose \
       "type": "http",
       "url": "http://your-host:9011/mcp",
       "headers": {
-        "Authorization": "Bearer your-api-key-from-.env"
+        "Authorization": "Bearer your-api-key-from-.env",
+        "X-Listonic-Email": "your@listonic-account.com",
+        "X-Listonic-Password": "your-listonic-password"
       }
     }
   }
@@ -105,6 +124,8 @@ docker compose \
 ```
 
 The `Authorization: Bearer` value must match `Security__ApiKey` in your `.env` file.
+
+`X-Listonic-Email` and `X-Listonic-Password` identify which Listonic account to use. If omitted, the server falls back to the `Listonic__Email`/`Listonic__Password` values in `.env`. This means multiple users can share one server instance, each passing their own credentials in headers — no server restart or config change required to add a new account.
 
 ### Connecting from claude.ai
 

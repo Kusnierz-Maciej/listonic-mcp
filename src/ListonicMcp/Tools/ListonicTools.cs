@@ -1,13 +1,13 @@
 using System.ComponentModel;
-using ListonicApiClient;
 using ListonicApiClient.Models.Items;
 using ListonicApiClient.Models.Lists;
+using ListonicMcp.Listonic;
 using ModelContextProtocol.Server;
 
 namespace ListonicMcp.Tools;
 
 [McpServerToolType]
-public sealed class ListonicTools(IListonicApi api)
+public sealed class ListonicTools(ListonicApiAccessor accessor)
 {
     public record AddItemInput(
         [property: Description("Item name")] string Name,
@@ -24,6 +24,7 @@ public sealed class ListonicTools(IListonicApi api)
     [Description("All shopping lists on the account, with their IDs. Use when targeting a specific list.")]
     public async Task<string> GetListsAsync(CancellationToken ct = default)
     {
+        var api = accessor.Api;
         var lists = await api.GetListsAsync(new GetListsRequest
         {
             IncludeShares = false,
@@ -43,7 +44,7 @@ public sealed class ListonicTools(IListonicApi api)
         [Description("The list ID (from get_lists)")] string listId,
         CancellationToken ct = default)
     {
-        var items = await api.GetItemsAsync(listId, ct);
+        var items = await accessor.Api.GetItemsAsync(listId, ct);
 
         if (items.Count == 0)
             return "List is empty.";
@@ -65,6 +66,7 @@ public sealed class ListonicTools(IListonicApi api)
         [Description("Items to add")] IEnumerable<AddItemInput> items,
         CancellationToken ct = default)
     {
+        var api = accessor.Api;
         var added = new List<string>();
         foreach (var item in items)
         {
@@ -86,6 +88,7 @@ public sealed class ListonicTools(IListonicApi api)
         [Description("Items to edit")] IEnumerable<EditItemInput> items,
         CancellationToken ct = default)
     {
+        var api = accessor.Api;
         int count = 0;
         foreach (var item in items)
         {
@@ -107,6 +110,7 @@ public sealed class ListonicTools(IListonicApi api)
         [Description("Item IDs to delete (from get_items)")] IEnumerable<string> itemIds,
         CancellationToken ct = default)
     {
+        var api = accessor.Api;
         int count = 0;
         foreach (var itemId in itemIds)
         {
@@ -123,7 +127,7 @@ public sealed class ListonicTools(IListonicApi api)
         [Description("New name for the list")] string name,
         CancellationToken ct = default)
     {
-        await api.RenameListAsync(listId, new ListonicApiClient.Models.Lists.RenameListRequest { Id = listId, Name = name }, ct);
+        await accessor.Api.RenameListAsync(listId, new RenameListRequest { Id = listId, Name = name }, ct);
         return $"List {listId} renamed to \"{name}\".";
     }
 
@@ -133,7 +137,7 @@ public sealed class ListonicTools(IListonicApi api)
         [Description("The list ID (from get_lists)")] string listId,
         CancellationToken ct = default)
     {
-        await api.DeleteListAsync(listId, ct);
+        await accessor.Api.DeleteListAsync(listId, ct);
         return $"List {listId} moved to trash.";
     }
 }

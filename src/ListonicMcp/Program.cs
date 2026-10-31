@@ -1,14 +1,12 @@
-using ListonicApiClient;
+using ListonicMcp.Listonic;
 using ListonicMcp.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var listonicOptions = new ListonicClientOptions
-{
-    Email    = builder.Configuration["Listonic:Email"]    ?? throw new InvalidOperationException("Listonic:Email is required"),
-    Password = builder.Configuration["Listonic:Password"] ?? throw new InvalidOperationException("Listonic:Password is required"),
-};
-builder.Services.AddListonicApiClient(listonicOptions);
+builder.Services.AddMemoryCache();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<ListonicApiCache>();
+builder.Services.AddScoped<ListonicApiAccessor>();
 
 builder.Services
     .AddMcpServer()
