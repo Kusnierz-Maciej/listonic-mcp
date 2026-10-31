@@ -1,5 +1,94 @@
 # listonic-mcp
 
+Unofficial MCP server for [Listonic](https://listonic.com) grocery lists, built on .NET 10 and ASP.NET Core.
+
+## MCP tools
+
+| Tool | Description |
+|---|---|
+| `get_lists` | All shopping lists with their IDs |
+| `get_items` | Items on a list — `[x]` already have, `[ ]` still to buy |
+| `add_items` | Add one or many items in a single call |
+| `edit_items` | Check/uncheck, rename, or change quantity (batched) |
+| `delete_items` | Permanently remove items |
+
+## Running the MCP server
+
+### Local development
+
+Set credentials via user secrets (never stored in the repo):
+
+```bash
+dotnet user-secrets --project src/ListonicMcp set "Listonic:Email" "your@email.com"
+dotnet user-secrets --project src/ListonicMcp set "Listonic:Password" "yourpassword"
+
+dotnet run --project src/ListonicMcp
+# Server starts at http://localhost:5100
+```
+
+No API key is required in development — `Security:ApiKey` is unset so the middleware lets all requests through.
+
+Connect Claude Code by adding to your MCP config (`.mcp.json` in the project root or `~/.claude/mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "listonic": {
+      "type": "http",
+      "url": "http://localhost:5100/mcp"
+    }
+  }
+}
+```
+
+### Docker (production / NAS)
+
+**1. Build the container image** (no Dockerfile — the SDK builds it):
+
+```bash
+dotnet publish src/ListonicMcp/ListonicMcp.csproj \
+  /t:PublishContainer \
+  -c Release \
+  -r linux-x64 \
+  --no-self-contained
+# Produces: listonic-mcp:latest and listonic-mcp:v1.0.0
+```
+
+**2. Configure credentials and API key:**
+
+```bash
+cp src/ListonicMcp/docker/example.env src/ListonicMcp/docker/.env
+# Edit .env — fill in email, password, and a strong random API key
+```
+
+**3. Start the container:**
+
+```bash
+docker compose \
+  -f src/ListonicMcp/docker/docker-compose.prod.yml \
+  --env-file src/ListonicMcp/docker/.env \
+  up -d
+# Exposed on host port 9011
+```
+
+**4. Connect Claude Code:**
+
+```json
+{
+  "mcpServers": {
+    "listonic": {
+      "type": "http",
+      "url": "http://your-host:9011/mcp",
+      "headers": {
+        "Authorization": "Bearer your-api-key-from-.env"
+      }
+    }
+  }
+}
+```
+
+The `Authorization: Bearer` value must match `Security__ApiKey` in your `.env` file.
+
 ## Running tests
 
 Tests hit the real Listonic API, so credentials are required. They are never stored in the repo.
