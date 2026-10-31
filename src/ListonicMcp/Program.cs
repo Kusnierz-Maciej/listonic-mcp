@@ -1,11 +1,12 @@
+using ListonicApiClient;
 using ListonicMcp.Listonic;
 using ListonicMcp.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddMemoryCache();
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddSingleton<ListonicApiCache>();
+builder.Services.AddTransient<IListonicCredentialProvider, HttpContextCredentialProvider>();
+builder.Services.AddListonicApiClient();
 builder.Services.AddScoped<ListonicApiAccessor>();
 
 builder.Services

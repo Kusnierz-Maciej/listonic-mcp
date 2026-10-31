@@ -7,29 +7,29 @@ namespace ListonicApiClient;
 
 public class ListonicAuthHandler : DelegatingHandler
 {
-    private readonly ListonicClientOptions _options;
-    private readonly SemaphoreSlim _lock = new(1, 1);
-    private string? _token;
+    private readonly IListonicCredentialProvider _credentials;
+    private readonly ListonicTokenStore _tokens;
 
-    public ListonicAuthHandler(ListonicClientOptions options)
+    public ListonicAuthHandler(IListonicCredentialProvider credentials, ListonicTokenStore tokens)
     {
-        _options = options;
+        _credentials = credentials;
+        _tokens = tokens;
     }
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
-        var token = await GetTokenAsync(cancellationToken);
+        var credentials = _credentials.GetCredentials();
+
+        var token = await _tokens.GetOrLoginAsync(credentials, ct => LoginAsync(credentials, ct), cancellationToken);
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 
         var response = await base.SendAsync(request, cancellationToken);
 
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
-            await _lock.WaitAsync(cancellationToken);
-            try { _token = null; }
-            finally { _lock.Release(); }
+            _tokens.Invalidate(credentials, token);
 
-            token = await GetTokenAsync(cancellationToken);
+            token = await _tokens.GetOrLoginAsync(credentials, ct => LoginAsync(credentials, ct), cancellationToken);
 
             var retryRequest = await CloneRequestAsync(request);
             retryRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -39,35 +39,15 @@ public class ListonicAuthHandler : DelegatingHandler
         return response;
     }
 
-    private async Task<string> GetTokenAsync(CancellationToken cancellationToken)
-    {
-        if (_token is not null)
-            return _token;
-
-        await _lock.WaitAsync(cancellationToken);
-        try
-        {
-            if (_token is not null)
-                return _token;
-
-            _token = await LoginAsync(cancellationToken);
-            return _token;
-        }
-        finally
-        {
-            _lock.Release();
-        }
-    }
-
-    private async Task<string> LoginAsync(CancellationToken cancellationToken)
+    private static async Task<string> LoginAsync(ListonicClientOptions credentials, CancellationToken cancellationToken)
     {
         var loginApi = RestService.For<IListonicApi>(
-            new HttpClient { BaseAddress = new Uri("https://api.listonic.com/api") });
+            new HttpClient { BaseAddress = new Uri(ListonicClientOptions.BaseUrl) });
 
         var response = await loginApi.LoginAsync(new LoginRequest
         {
-            Username = _options.Email,
-            Password = _options.Password
+            Username = credentials.Email,
+            Password = credentials.Password
         }, cancellationToken);
 
         return response.AccessToken;

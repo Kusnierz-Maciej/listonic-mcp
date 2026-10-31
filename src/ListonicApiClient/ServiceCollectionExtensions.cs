@@ -5,30 +5,14 @@ namespace ListonicApiClient;
 
 public static class ServiceCollectionExtensions
 {
-    private const string BaseUrl = "https://api.listonic.com/api";
-
-    public static IServiceCollection AddListonicApiClient(
-        this IServiceCollection services,
-        ListonicClientOptions options)
+    public static IServiceCollection AddListonicApiClient(this IServiceCollection services)
     {
-        services.AddSingleton(options);
+        services.AddSingleton<ListonicTokenStore>();
         services.AddTransient<ListonicAuthHandler>();
 
         services
             .AddRefitClient<IListonicApi>()
-            .ConfigureHttpClient(c => c.BaseAddress = new Uri(BaseUrl))
-            .AddHttpMessageHandler<ListonicAuthHandler>();
-
-        return services;
-    }
-
-    public static IServiceCollection AddListonicApiClient(
-        this IServiceCollection services,
-        Action<HttpClient> configureClient)
-    {
-        services
-            .AddRefitClient<IListonicApi>()
-            .ConfigureHttpClient(configureClient)
+            .ConfigureHttpClient(c => c.BaseAddress = new Uri(ListonicClientOptions.BaseUrl))
             .AddHttpMessageHandler<ListonicAuthHandler>();
 
         return services;

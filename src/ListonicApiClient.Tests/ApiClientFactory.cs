@@ -1,4 +1,3 @@
-using ListonicApiClient;
 using ListonicApiClient.Models.Login;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -26,8 +25,14 @@ internal static class ApiClientFactory
 
         var options = new ListonicClientOptions { Email = email, Password = password };
         var services = new ServiceCollection();
-        services.AddListonicApiClient(options);
+        services.AddSingleton<IListonicCredentialProvider>(new StaticCredentialProvider(options));
+        services.AddListonicApiClient();
         return (services.BuildServiceProvider().GetRequiredService<IListonicApi>(), options);
+    }
+
+    private sealed class StaticCredentialProvider(ListonicClientOptions options) : IListonicCredentialProvider
+    {
+        public ListonicClientOptions GetCredentials() => options;
     }
 
     public static LoginRequest CreateLoginRequest() => new()
