@@ -11,14 +11,14 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
 {
     public record AddItemInput(
         [property: Description("Product name in the user's language, e.g. \"mleko\". No quantity inside the name.")] string Name,
-        [property: Description("Quantity as a number, e.g. 2, 0.5, 500 (dot as decimal separator). Leave null if no quantity.")] decimal? Amount = null,
+        [property: Description("Quantity as a number, e.g. 2, 0.5, 500. Leave null if no quantity.")] decimal? Amount = null,
         [property: Description("Free-text unit shown in the app, e.g. 'kg', 'g', 'l', 'szt.'. Leave null for plain counts or no quantity.")] string? Unit = null);
 
     public record EditItemInput(
         [property: Description("Item ID (from get_items)")] string ItemId,
         [property: Description("true = bought / ticked off, false = back to still to buy")] bool? IsChecked = null,
         [property: Description("New item name")] string? Name = null,
-        [property: Description("New amount as a number, e.g. 2, 0.5 (dot as decimal separator). Send 0 to clear. Leave null to keep existing.")] decimal? Amount = null,
+        [property: Description("New amount as a number, e.g. 2, 0.5. Send 0 to clear. Leave null to keep existing.")] decimal? Amount = null,
         [property: Description("Free-text unit shown in the app, e.g. 'kg', 'g', 'l', 'szt.'. Send \"\" to clear. Leave null to keep existing.")] string? Unit = null);
 
     [McpServerTool(Name = "get_lists")]
