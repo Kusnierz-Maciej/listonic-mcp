@@ -46,16 +46,11 @@ jobs:
           echo "VERSION=${REF#v}" >> "$GITHUB_OUTPUT"
 
       - name: Publish container image
+        env:
+          ContainerImageTags: ${{ steps.version.outputs.VERSION }};latest
         run: |
           dotnet publish src/ListonicMcp/ListonicMcp.csproj \
             /t:PublishContainer \
             -c Release \
             -p:ContainerRegistry=${{ env.REGISTRY }} \
-            -p:ContainerRepository=${{ env.IMAGE_NAME }} \
-            -p:ContainerImageTag=${{ steps.version.outputs.VERSION }}
-
-      - name: Tag and push latest
-        run: |
-          docker tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }} \
-                     ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          docker push ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            -p:ContainerRepository=${{ env.IMAGE_NAME }}
