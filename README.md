@@ -80,15 +80,15 @@ dotnet publish src/ListonicMcp/ListonicMcp.csproj \
   -c Release \
   -r linux-x64 \
   --no-self-contained
-# Produces: listonic-mcp:latest and listonic-mcp:1.3.2
+# Produces: listonic-mcp:v1.3.2 and listonic-mcp:latest
 ```
 
 To transfer to a NAS without a registry:
 
 ```bash
-docker save listonic-mcp:latest | gzip > listonic-mcp-1.3.2.tar.gz
-scp listonic-mcp-1.3.2.tar.gz user@nas:/path/to/deploy/
-docker load < listonic-mcp-1.3.2.tar.gz
+docker save listonic-mcp:latest | gzip > listonic-mcp-v1.3.2.tar.gz
+scp listonic-mcp-v1.3.2.tar.gz user@nas:/path/to/deploy/
+docker load < listonic-mcp-v1.3.2.tar.gz
 ```
 </details>
 
