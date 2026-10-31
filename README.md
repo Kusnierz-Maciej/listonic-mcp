@@ -132,6 +132,8 @@ Listonic__Password=yourpassword
 
 The server must be publicly reachable from the internet. If it's on a local NAS, expose it via a tunnel such as [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) or ngrok.
 
+> **After updating the server to a new version**, go to **Settings → Connectors → Listonic (Custom MCP) → Refresh tool list** so Claude picks up any changed tool descriptions.
+
 ### Local development
 
 Credentials can be supplied either via user secrets (server-side fallback) or per-request headers. For local dev the simplest approach is user secrets:
