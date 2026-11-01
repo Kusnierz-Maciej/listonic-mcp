@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: api-contract-health
+  group: api-contract-compatibility
   cancel-in-progress: false
 
 permissions:
@@ -37,11 +37,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          gh label create api-contract-health --color D93F0B --description "Scheduled API contract health failures" 2>/dev/null || true
-          existing=$(gh issue list --label api-contract-health --state open --json number --jq '.[0].number // empty')
+          gh label create api-contract-compatibility --color D93F0B --description "Scheduled API contract compatibility failures" 2>/dev/null || true
+          existing=$(gh issue list --label api-contract-compatibility --state open --json number --jq '.[0].number // empty')
           if [ -z "$existing" ]; then
             gh issue create --title "Listonic API contract compatibility check failing" \
-              --label api-contract-health \
+              --label api-contract-compatibility \
               --body "Scheduled run failed: $RUN_URL"
           else
             gh issue comment "$existing" --body "Still failing: $RUN_URL"
