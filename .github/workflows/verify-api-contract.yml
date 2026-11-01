@@ -1,4 +1,4 @@
-name: Listonic API contract health
+name: Verify Listonic API contract compatibility
 
 on:
   schedule:
@@ -14,7 +14,8 @@ permissions:
   issues: write
 
 jobs:
-  api-tests:
+  verify-contract:
+    name: Verify API contract
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -39,7 +40,7 @@ jobs:
           gh label create api-contract-health --color D93F0B --description "Scheduled API contract health failures" 2>/dev/null || true
           existing=$(gh issue list --label api-contract-health --state open --json number --jq '.[0].number // empty')
           if [ -z "$existing" ]; then
-            gh issue create --title "Listonic API contract health failing" \
+            gh issue create --title "Listonic API contract compatibility check failing" \
               --label api-contract-health \
               --body "Scheduled run failed: $RUN_URL"
           else
