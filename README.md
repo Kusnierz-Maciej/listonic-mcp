@@ -177,6 +177,32 @@ Alternatively, skip user secrets entirely and pass credentials as a Basic auth h
 }
 ```
 
+## Stdio mode
+
+For MCP clients that launch the server as a subprocess, run it with `--stdio`. The server then talks MCP over stdin/stdout instead of HTTP, and logs go to stderr. There is no HTTP endpoint, so `Security__ApiKey` is not used. The Listonic account is read from environment variables:
+
+```bash
+Listonic__Email=your@email.com Listonic__Password=yourpassword \
+  dotnet run --project src/ListonicMcp -- --stdio
+```
+
+Example client configuration:
+
+```json
+{
+  "mcpServers": {
+    "listonic": {
+      "command": "dotnet",
+      "args": ["run", "--project", "src/ListonicMcp", "--", "--stdio"],
+      "env": {
+        "Listonic__Email": "your@email.com",
+        "Listonic__Password": "yourpassword"
+      }
+    }
+  }
+}
+```
+
 ## Running tests
 
 The tests run against the live Listonic API to detect whether the unofficial API has changed in a way that would break this server. They hit the real API, so credentials are required. They are never stored in the repo.
