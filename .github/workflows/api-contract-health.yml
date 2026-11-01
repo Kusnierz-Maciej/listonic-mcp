@@ -2,7 +2,7 @@ name: Listonic API contract health
 
 on:
   schedule:
-    - cron: '17 6 * * *'
+    - cron: '47 2 * * *'  # 03:47 CET (winter) / 04:47 CEST (summer); cron is UTC-only
   workflow_dispatch:
 
 concurrency:
