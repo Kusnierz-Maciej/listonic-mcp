@@ -36,7 +36,7 @@ jobs:
         env:
           INPUT_REF: ${{ inputs.ref }}
         run: |
-          ref="${INPUT_REF:-$(git tag --sort=-v:refname 'v*' | head -1)}"
+          ref="${INPUT_REF:-$(git tag -l 'v*' --sort=-v:refname | head -1)}"
           if [ -z "$ref" ]; then echo "No v* tag found"; exit 1; fi
           git checkout --detach "$ref"
           echo "ref=$ref" >> "$GITHUB_OUTPUT"
