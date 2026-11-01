@@ -4,6 +4,10 @@ on:
   schedule:
     - cron: '47 2 * * *'  # 03:47 CET (winter) / 04:47 CEST (summer); cron is UTC-only
   workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Tag, branch or SHA to test (default: latest v* tag)'
+        required: false
 
 concurrency:
   group: api-contract-compatibility
@@ -23,6 +27,20 @@ jobs:
       LISTONIC__PASSWORD: ${{ secrets.TEST_LISTONIC_PASSWORD }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Resolve ref to test
+        id: ref
+        env:
+          INPUT_REF: ${{ inputs.ref }}
+        run: |
+          ref="${INPUT_REF:-$(git tag --sort=-v:refname 'v*' | head -1)}"
+          if [ -z "$ref" ]; then echo "No v* tag found"; exit 1; fi
+          git checkout --detach "$ref"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+          echo "Testing **$ref** ($(git rev-parse --short HEAD))" >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/setup-dotnet@v5
         with:
@@ -35,6 +53,7 @@ jobs:
         if: failure() && github.event_name == 'schedule'
         env:
           GH_TOKEN: ${{ github.token }}
+          TESTED_REF: ${{ steps.ref.outputs.ref }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           gh label create api-contract-compatibility --color D93F0B --description "Scheduled API contract compatibility failures" 2>/dev/null || true
@@ -42,7 +61,7 @@ jobs:
           if [ -z "$existing" ]; then
             gh issue create --title "Listonic API contract compatibility check failing" \
               --label api-contract-compatibility \
-              --body "Scheduled run failed: $RUN_URL"
+              --body "Scheduled run failed on $TESTED_REF: $RUN_URL"
           else
-            gh issue comment "$existing" --body "Still failing: $RUN_URL"
+            gh issue comment "$existing" --body "Still failing on $TESTED_REF: $RUN_URL"
           fi
