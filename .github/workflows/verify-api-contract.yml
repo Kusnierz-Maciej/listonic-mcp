@@ -2,7 +2,8 @@ name: Verify Listonic API contract compatibility
 
 on:
   schedule:
-    - cron: '47 2 * * *'  # 03:47 CET (winter) / 04:47 CEST (summer); cron is UTC-only
+    - cron: '25 3 * * *'
+      timezone: "Europe/Warsaw"
   workflow_dispatch:
     inputs:
       ref:
