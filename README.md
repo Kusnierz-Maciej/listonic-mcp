@@ -18,7 +18,7 @@ Unofficial MCP server for [Listonic](https://listonic.com) grocery lists, built 
 
 ### Docker (production / NAS)
 
-The image is published to GHCR on every release — no build or clone required.
+The image is published to GHCR on every release as a multi-architecture image for `linux/amd64` and `linux/arm64` — no build or clone required. Docker automatically selects the matching architecture.
 
 **1. Create a `docker-compose.yml`:**
 
@@ -81,7 +81,7 @@ docker compose up -d
 
 ### Synology NAS (Container Manager)
 
-The published image is `linux/amd64` — use an Intel/AMD Synology model.
+The published image supports `linux/amd64` and `linux/arm64`. Use the image on either Intel/AMD or ARM based Synology models.
 
 **1. Create a folder** for the project, e.g. via File Station: `/docker/listonic-mcp`.
 
