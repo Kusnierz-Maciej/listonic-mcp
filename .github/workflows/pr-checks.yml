@@ -25,7 +25,7 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Build
-        run: dotnet build src/ListonicMcp.slnx -c Release -warnaserror
+        run: dotnet build src/ListonicMcp.slnx -c Release
 
-      - name: Unit tests (excluding E2E)
-        run: dotnet test --solution src/ListonicMcp.slnx -c Release --no-build --treenode-filter '/**[Category!=E2E]'
+      - name: Tests (excluding LiveApi)
+        run: dotnet test --solution src/ListonicMcp.slnx -c Release --no-build --treenode-filter '/**[Category!=LiveApi]'

@@ -3,7 +3,7 @@ using ListonicApiClient.Models.Lists;
 
 namespace ListonicApiClient.Tests;
 
-[Category("E2E")]
+[Category("LiveApi")]
 public class ListonicApiTests
 {
     private const string TestPrefix = "[test] ";

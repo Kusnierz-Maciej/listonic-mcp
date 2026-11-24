@@ -47,8 +47,8 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Run E2E API tests
-        run: dotnet test --project src/ListonicApiClient.Tests --treenode-filter '/**[Category=E2E]'
+      - name: Run live API tests
+        run: dotnet test --project src/ListonicApiClient.Tests --treenode-filter '/**[Category=LiveApi]'
 
       - name: Open or update issue on failure
         if: failure() && github.event_name == 'schedule'
