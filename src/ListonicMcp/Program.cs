@@ -2,6 +2,7 @@ using ListonicApiClient;
 using ListonicMcp;
 using ListonicMcp.Listonic;
 using ListonicMcp.Security;
+using ListonicMcp.Tools;
 
 if (args.Contains("--stdio"))
 {
@@ -19,7 +20,7 @@ builder.Services.AddScoped<ListonicApiAccessor>();
 builder.Services
     .AddMcpServer(options => options.ServerInstructions = McpInstructions.Text)
     .WithHttpTransport()
-    .WithToolsFromAssembly();
+    .WithTools<ListonicTools>();
 
 var app = builder.Build();
 

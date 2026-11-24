@@ -1,5 +1,6 @@
 using ListonicApiClient;
 using ListonicMcp.Listonic;
+using ListonicMcp.Tools;
 
 namespace ListonicMcp;
 
@@ -22,7 +23,7 @@ public static class StdioHost
         builder.Services
             .AddMcpServer(options => options.ServerInstructions = McpInstructions.Text)
             .WithStdioServerTransport()
-            .WithToolsFromAssembly();
+            .WithTools<ListonicTools>();
 
         await builder.Build().RunAsync();
     }
