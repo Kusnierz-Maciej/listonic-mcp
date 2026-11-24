@@ -1,0 +1,31 @@
+name: PR checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: pr-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build & unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build
+        run: dotnet build src/ListonicMcp.slnx -c Release -warnaserror
+
+      - name: Unit tests (excluding E2E)
+        run: dotnet test --solution src/ListonicMcp.slnx -c Release --no-build --treenode-filter '/**[Category!=E2E]'
