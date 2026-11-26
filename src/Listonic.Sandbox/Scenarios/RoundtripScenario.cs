@@ -14,8 +14,9 @@ namespace Listonic.Sandbox.Scenarios;
 /// WHY: one run captures every write endpoint's request and response shape, plus the error statuses
 /// and bodies the tool-layer error mapping is built on.
 ///
-/// FOUND / USE IT FOR: payload formats (amount as string, checked as 0/1), what the add response
-/// leaves empty, and the 4xx bodies for missing lists/items. Never touches other lists.
+/// FOUND (2026-11-27): unknown list → GET /lists/{id} 404 (RFC 7807 body) but GET /lists/{id}/items
+/// 200 []; unknown item → PATCH 404 but DELETE 200 (silent). Add returns 201 with the full item.
+/// USE IT FOR: payload formats and error shapes after API changes. Never touches other lists.
 /// </summary>
 public sealed class RoundtripScenario : IScenario
 {

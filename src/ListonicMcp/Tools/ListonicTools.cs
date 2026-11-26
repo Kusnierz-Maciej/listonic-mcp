@@ -80,7 +80,12 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
             listId, listName, items.Count, items.Count(i => !i.Checked));
 
         if (items.Count == 0)
+        {
+            // Listonic answers 200 [] for an unknown list id too; GET /lists/{id} 404s for those
+            // (mapped to "not found" by the guard), so a wrong id isn't reported as an empty list.
+            await api.GetListAsync(listId, ct);
             return "List is empty.";
+        }
 
         return string.Join("\n", items.OrderBy(i => i.Checked ? 1 : 0).Select(FormatItem));
     });
@@ -185,17 +190,28 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
         var allItems = await api.GetItemsAsync(listId, ct);
         var itemById = allItems.ToDictionary(i => i.Id);
 
+        // Listonic answers 200 to DELETE of an id that isn't on the list, so check against the list
+        // first and report missing ids instead of claiming they were deleted.
         var deleted = new List<string>();
+        var missing = new List<string>();
         foreach (var item in items)
         {
+            if (!itemById.TryGetValue(item.ItemId, out var si))
+            {
+                missing.Add($"[{item.ItemId}] {item.ConfirmName}");
+                continue;
+            }
             await api.DeleteItemAsync(listId, item.ItemId, ct);
-            deleted.Add(itemById.TryGetValue(item.ItemId, out var si)
-                ? FormatItem(si)
-                : $"[ ] [{item.ItemId}] {item.ConfirmName}");
+            deleted.Add(FormatItem(si));
         }
         ListonicTelemetry.Outcome("deleted");
-        logger.LogInformation("delete_items [{ListId}] {ListName}: deleted {Count} item(s)", listId, listName, deleted.Count);
-        return deleted.Count > 0 ? string.Join("\n", deleted) : "No items deleted.";
+        logger.LogInformation("delete_items [{ListId}] {ListName}: deleted {Count} item(s), {Missing} not on the list",
+            listId, listName, deleted.Count, missing.Count);
+
+        var result = deleted.Count > 0 ? string.Join("\n", deleted) : "No items deleted.";
+        if (missing.Count > 0)
+            result += "\nNot on this list (nothing deleted; call get_items for current ids):\n" + string.Join("\n", missing);
+        return result;
     });
 
     [McpServerTool(Name = "create_list", Title = "Create list", ReadOnly = false, Destructive = false, Idempotent = false)]

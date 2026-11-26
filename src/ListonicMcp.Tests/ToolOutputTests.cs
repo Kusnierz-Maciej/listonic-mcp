@@ -71,3 +71,38 @@ public class CreateListToolTests
         await api.DidNotReceiveWithAnyArgs().CreateListAsync(default!, default);
     }
 }
+
+public class SilentApiCasesTests
+{
+    private readonly ListonicApiClient.IListonicApi _api = NSubstitute.Substitute.For<ListonicApiClient.IListonicApi>();
+    private ListonicTools Tools => new(_api, Microsoft.Extensions.Logging.Abstractions.NullLogger<ListonicTools>.Instance);
+
+    [Test]
+    public async Task GetItems_EmptyResult_ChecksListExists()
+    {
+        _api.GetItemsAsync("404", NSubstitute.Arg.Any<CancellationToken>()).Returns([]);
+        var notFound = await Refit.ApiException.Create(
+            new HttpRequestMessage(HttpMethod.Get, "https://api.listonic.com/api/lists/404"), HttpMethod.Get,
+            new HttpResponseMessage(System.Net.HttpStatusCode.NotFound), new Refit.RefitSettings());
+        NSubstitute.ExceptionExtensions.ExceptionExtensions.ThrowsAsync(
+            _api.GetListAsync("404", NSubstitute.Arg.Any<CancellationToken>()), notFound);
+
+        var ex = await Assert.ThrowsAsync<ModelContextProtocol.McpException>(() => Tools.GetItemsAsync("404", "Nope"));
+
+        await Assert.That(ex!.Message).Contains("couldn't find that list or item");
+    }
+
+    [Test]
+    public async Task DeleteItems_UnknownId_IsReported_NotDeleted()
+    {
+        _api.GetItemsAsync("1", NSubstitute.Arg.Any<CancellationToken>()).Returns([Fake.Item("a", "mleko")]);
+
+        var result = await Tools.DeleteItemsAsync("1", "Zakupy",
+            [new ListonicTools.DeleteItemInput("a", "mleko"), new ListonicTools.DeleteItemInput("zzz", "chleb")]);
+
+        await Assert.That(result).IsEqualTo(
+            "[ ] [a] mleko\nNot on this list (nothing deleted; call get_items for current ids):\n[zzz] chleb");
+        await _api.Received(1).DeleteItemAsync("1", "a", NSubstitute.Arg.Any<CancellationToken>());
+        await _api.DidNotReceive().DeleteItemAsync("1", "zzz", NSubstitute.Arg.Any<CancellationToken>());
+    }
+}

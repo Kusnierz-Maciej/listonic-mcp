@@ -13,7 +13,8 @@ namespace Listonic.Sandbox.Scenarios;
 /// WHY: the login outcome classifier (bad credentials vs API error) and the OAuth sign-in form need
 /// to know exactly which status code and body Listonic returns for a credential rejection.
 ///
-/// FOUND / USE IT FOR: the status/body of a rejected login (record it in docs/API-NOTES.md).
+/// FOUND (2026-11-27): wrong password and unknown email both → HTTP 400
+/// {"Message":"Unauthorized token. Token is invalid"}; a valid login → expires_in 86399 s.
 /// Run sparingly — repeated failed logins could trip account protection.
 /// </summary>
 public sealed class LoginProbeScenario : IScenario
