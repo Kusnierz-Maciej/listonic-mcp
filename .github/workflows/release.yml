@@ -1,0 +1,103 @@
+name: Release
+run-name: Release ${{ inputs.tag || github.ref_name }}
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build (e.g. v1.11.0)'
+        required: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/listonic-mcp
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # create the GitHub release
+      packages: write   # push the image to GHCR
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          # Full history + tags so we can diff against the previous release tag.
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Resolve tag and version
+        id: ver
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          # The tag is the source of truth for the version. Strip the leading v.
+          version="${TAG#v}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Building **$TAG** (version $version)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish container image
+        run: |
+          dotnet publish src/ListonicMcp/ListonicMcp.csproj \
+            /t:PublishContainer \
+            -c Release \
+            -p:Version=${{ steps.ver.outputs.version }} \
+            -p:ContainerRegistry=${{ env.REGISTRY }} \
+            -p:ContainerRepository=${{ env.IMAGE_NAME }}
+
+      # Only runs if every step above succeeded, so a failed build leaves the tag
+      # dangling with no release — re-run this workflow for the same tag once fixed,
+      # or bump to the next patch version.
+      - name: Create GitHub release
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.ver.outputs.tag }}
+        run: |
+          # Skip if a release for this tag already exists (e.g. a re-run).
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG already exists — skipping."
+            exit 0
+          fi
+
+          # GHCR image paths must be lowercase; the owner may be mixed-case.
+          image_lc="${REGISTRY}/$(echo "$IMAGE_NAME" | tr '[:upper:]' '[:lower:]')"
+          pkg_url="https://github.com/${GITHUB_REPOSITORY}/pkgs/container/listonic-mcp"
+
+          # Raw changelog: every commit since the previous tag as "- <sha> <title>".
+          # These bullets are transcribed into a polished "## What's changed" section
+          # afterwards (see the create-release skill); the "## Image" section below is final.
+          prev=$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || echo "")
+          range=${prev:+$prev..}${TAG}
+          {
+            echo "## Commits"
+            echo
+            git log "$range" --no-merges --pretty='- %h %s'
+            echo
+            echo "## Image"
+            echo
+            echo "[![Docker images](https://img.shields.io/badge/Docker_images-${TAG}-blue?logo=docker)](${pkg_url}?tag=${TAG})"
+            echo
+            echo "    docker pull ${image_lc}:${TAG}"
+          } > notes.md
+
+          gh release create "$TAG" --title "$TAG" --notes-file notes.md
+          echo "Created release $TAG" >> "$GITHUB_STEP_SUMMARY"
