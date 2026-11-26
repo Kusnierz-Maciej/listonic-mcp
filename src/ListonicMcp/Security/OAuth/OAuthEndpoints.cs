@@ -277,8 +277,12 @@ public static class OAuthEndpoints
         var apiKeyBlock = requireApiKey
             ? """
                 <label for="mcp-api-key">MCP server API key</label>
-                <input id="mcp-api-key" name="api_key" type="password"
-                       autocapitalize="none" spellcheck="false" required>
+                <div class="secret">
+                  <input id="mcp-api-key" name="api_key" type="password"
+                         autocapitalize="none" spellcheck="false" required>
+                  <button type="button" class="reveal" aria-controls="mcp-api-key" aria-pressed="false"
+                          data-what="API key" aria-label="Show API key">Show</button>
+                </div>
                 <p class="field-hint">Provided by whoever runs this MCP server (not your Listonic password).</p>
             """
             : "";
@@ -302,6 +306,12 @@ public static class OAuthEndpoints
               button{margin-top:1.25rem;width:100%;padding:.7rem;border:0;border-radius:8px;background:#1f9d3a;color:#fff;
                      font-size:1rem;font-weight:600;cursor:pointer} button:hover{background:#198232}
               button:disabled{opacity:.65;cursor:progress} input:read-only{opacity:.65}
+              .secret{position:relative} .secret input{padding-right:4.5rem}
+              button.reveal{position:absolute;right:.35rem;top:50%;transform:translateY(-50%);margin:0;width:auto;
+                            padding:.3rem .65rem;font-size:.78rem;font-weight:600;background:transparent;color:#1f9d3a;
+                            border-radius:6px}
+              button.reveal:hover{background:rgba(31,157,58,.1)}
+              button.reveal:focus-visible{outline:2px solid #1f9d3a;outline-offset:1px}
               .error{background:#fde8e8;color:#9b1c1c;padding:.6rem .75rem;border-radius:8px;font-size:.85rem}
               .field-hint{color:#667085;font-size:.72rem;margin:.3rem 0 0}
               .hint{color:#667085;font-size:.78rem;margin-top:1rem}
@@ -311,6 +321,7 @@ public static class OAuthEndpoints
                 input{background:#0f1117;color:#e6e8ee;border-color:#3a3f4b}
                 input::placeholder{color:#8b90a0}
                 button{background:#2bb24c} button:hover{background:#3cc45d}
+                button.reveal{background:transparent;color:#3cc45d} button.reveal:hover{background:rgba(60,196,93,.15)}
                 .error{background:#3a1b1d;color:#f3b4b4}
                 .field-hint,.hint{color:#9aa0b0}
               }
@@ -329,8 +340,12 @@ public static class OAuthEndpoints
                        autocomplete="username" autocapitalize="none" spellcheck="false" required>
 
                 <label for="listonic_password">Listonic account password</label>
-                <input id="listonic_password" name="listonic_password" type="password"
-                       autocomplete="current-password" required>
+                <div class="secret">
+                  <input id="listonic_password" name="listonic_password" type="password"
+                         autocomplete="current-password" required>
+                  <button type="button" class="reveal" aria-controls="listonic_password" aria-pressed="false"
+                          data-what="password" aria-label="Show password">Show</button>
+                </div>
             {{apiKeyBlock}}
                 <button id="submit" type="submit">Sign in</button>
               </form>
@@ -343,14 +358,31 @@ public static class OAuthEndpoints
               const form = document.getElementById('login');
               const button = document.getElementById('submit');
               const fields = form.querySelectorAll('input:not([type=hidden])');
+              const reveals = form.querySelectorAll('button.reveal');
+
+              // Show/Hide toggle on secret fields.
+              const setRevealed = (toggle, shown) => {
+                const input = document.getElementById(toggle.getAttribute('aria-controls'));
+                input.type = shown ? 'text' : 'password';
+                toggle.textContent = shown ? 'Hide' : 'Show';
+                toggle.setAttribute('aria-pressed', String(shown));
+                toggle.setAttribute('aria-label', (shown ? 'Hide ' : 'Show ') + toggle.dataset.what);
+              };
+              reveals.forEach(t => t.addEventListener('click', () => {
+                const input = document.getElementById(t.getAttribute('aria-controls'));
+                setRevealed(t, input.type === 'password');
+                input.focus();
+              }));
               const setBusy = busy => {
                 fields.forEach(f => f.readOnly = busy);
+                reveals.forEach(t => t.disabled = busy);
                 button.disabled = busy;
                 button.textContent = busy ? 'Signing in…' : 'Sign in';
                 form.setAttribute('aria-busy', String(busy));
               };
               form.addEventListener('submit', e => {
                 if (button.disabled) { e.preventDefault(); return; } // swallow double submits
+                reveals.forEach(t => setRevealed(t, false)); // never submit / cache secrets as plain text
                 setBusy(true);
               });
               // Back/forward cache restores the locked page — unlock it.
