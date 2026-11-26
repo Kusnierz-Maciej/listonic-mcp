@@ -40,7 +40,9 @@ Encodings are handled by `ZeroOneBoolConverter` and `DecimalStringConverter`.
 
 ## Other
 
-- `GET /categoriesv2` — product categories (not modelled yet; dump with `dump-categories`).
+- `GET /categoriesv2` — flat list of product categories (26 on a Polish account): `Id`, `Name`, `IconId`,
+  `Order`, `AutoOrder`, `Color`, `ColorDark`, `Standard`. Items reference them by `CategoryId`, which the API
+  assigns automatically on add. Not modelled yet (future categories feature; dump with `dump-categories`).
 - `GET /account/userinfo` — basic account info.
 - Errors use RFC 7807 problem details, e.g. `404 {"title":"The specified resource was not found.",
   "detail":"Entity \"ShoppingList\" (999999999) was not found.", …}`. The tool layer maps `404` → "not found",
