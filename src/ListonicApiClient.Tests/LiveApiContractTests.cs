@@ -21,10 +21,10 @@ public class LiveApiContractTests
     private readonly IListonicApi _api = ApiClientFactory.Api;
     private static IHttpClientFactory HttpClients => ApiClientFactory.Services.GetRequiredService<IHttpClientFactory>();
 
-    // Before: removes "[test] " lists left behind by a crashed previous run. After: safety net for the
-    // per-test finally blocks.
+    // Before (once per run): removes "[test] " lists left by a crashed previous run. After: safety net
+    // for the per-test finally blocks.
     [Before(HookType.Class)]
-    public static Task SweepBefore() => LiveApi.SweepTestListsAsync();
+    public static Task SweepBefore() => LiveApi.SweepOnceAtStartAsync();
 
     [After(HookType.Class)]
     public static Task SweepAfter() => LiveApi.SweepTestListsAsync();

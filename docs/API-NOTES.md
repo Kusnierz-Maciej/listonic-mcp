@@ -56,7 +56,7 @@ Encodings are handled by `ZeroOneBoolConverter` and `DecimalStringConverter`.
 
 Each behaviour the code depends on has a `[Category("LiveApi")]` test (run nightly against the latest
 release by *Verify Listonic API contract compatibility*). Live test classes are `[NotInParallel]` on one key,
-and each sweeps all `[test] ` lists before and after it runs (crash recovery).
+all `[test] ` lists are swept once when the run starts (crash recovery) and after each class.
 
 | Contract | Code that relies on it | Test |
 |---|---|---|

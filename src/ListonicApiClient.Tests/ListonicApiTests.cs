@@ -11,9 +11,9 @@ public class ListonicApiTests
 
     private readonly IListonicApi _api = ApiClientFactory.Api;
 
-    // Before: removes "[test] " lists left behind by a crashed previous run. After: normal cleanup.
+    // Before (once per run): removes "[test] " lists left by a crashed previous run. After: normal cleanup.
     [Before(HookType.Class)]
-    public static Task SweepBefore() => LiveApi.SweepTestListsAsync();
+    public static Task SweepBefore() => LiveApi.SweepOnceAtStartAsync();
 
     [After(HookType.Class)]
     public static Task SweepAfter() => LiveApi.SweepTestListsAsync();

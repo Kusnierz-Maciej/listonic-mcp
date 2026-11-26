@@ -162,7 +162,7 @@ They run nightly in CI against the latest release, and an issue is opened when t
 
 - run **one at a time** (never in parallel) — one real account, one rate limit;
 - write only to lists they create, named `[test] …`, and delete them;
-- delete every `[test] ` list **before and after** each test class, so a crashed or cancelled run is
-  cleaned up by the next one.
+- delete every `[test] ` list once when the run starts (so a crashed or cancelled run is cleaned up by
+  the next one) and after each test class.
 
 Pull requests run only the unit + offline tests.
