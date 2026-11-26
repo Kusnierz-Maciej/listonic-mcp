@@ -35,7 +35,8 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
 
     [McpServerTool(Name = "get_lists")]
     [Description("List every shopping list the user can access (own and shared). Returns one line per list as \"[listId] name (private|shared) - N unchecked\". Call this first - every other tool needs a listId from here. Match the user's wording to a list name; if more than one list could fit, ask which one. This server has no categories or item notes and can't create lists or move items between lists - say so instead of looking for another tool.")]
-    public async Task<string> GetListsAsync(CancellationToken ct = default)
+    public Task<string> GetListsAsync(CancellationToken ct = default)
+        => ToolErrors.GuardAsync("get_lists", logger, async () =>
     {
         var lists = await api.GetListsAsync(new GetListsRequest
         {
@@ -57,7 +58,7 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
             var unchecked_ = l.ItemsCount - l.CheckedItemsCount;
             return $"[{l.Id}] {l.Name} ({shared}) - {unchecked_} unchecked";
         }));
-    }
+    });
 
     [McpServerTool(Name = "get_items")]
     [Description(
@@ -65,10 +66,11 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
         "When the user asks what to buy, report only unchecked items; mention checked ones only if asked. " +
         "Call this before edit_items or delete_items to get itemIds, and before add_items to avoid duplicates. " +
         "Several rows can share a name. When the user names such an item, tick or untick every row the change applies to (only unchecked rows when ticking off). Before deleting it or changing its amount, consider only unchecked rows unless the user means a checked one: if one row matches, act on it; if several match, ask which one.")]
-    public async Task<string> GetItemsAsync(
+    public Task<string> GetItemsAsync(
         [Description("The list ID (from get_lists)")] string listId,
         [Description("The list's name exactly as get_lists shows it. Shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,
         CancellationToken ct = default)
+        => ToolErrors.GuardAsync("get_items", logger, async () =>
     {
         TagList(listId, listName);
         var items = await api.GetItemsAsync(listId, ct);
@@ -81,7 +83,7 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
             return "List is empty.";
 
         return string.Join("\n", items.OrderBy(i => i.Checked ? 1 : 0).Select(FormatItem));
-    }
+    });
 
     [McpServerTool(Name = "add_items")]
     [Description(
@@ -89,11 +91,12 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
         "Put only the product in name (in the user's language, e.g. \"mleko\"), the number in amount and the unit in unit - never the quantity inside the name. " +
         "Before adding, call get_items and check whether the item already exists. If it's checked, untick it and set the amount the user gave. If it's unchecked, ask whether to add to its amount or replace it. Don't create a duplicate row. " +
         "Returns the added items in get_items format.")]
-    public async Task<string> AddItemsAsync(
+    public Task<string> AddItemsAsync(
         [Description("The list ID (from get_lists)")] string listId,
         [Description("The list's name exactly as get_lists shows it. Shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,
         [Description("Items to add")] List<AddItemInput> items,
         CancellationToken ct = default)
+        => ToolErrors.GuardAsync("add_items", logger, async () =>
     {
         TagList(listId, listName);
         ListonicTelemetry.Tag(ListonicTelemetry.Tags.ItemsCount, items.Count);
@@ -120,7 +123,7 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
         return added.Count > 0
             ? string.Join("\n", added.Select(FormatItem))
             : string.Join("\n", addedIds.Select(id => $"[ ] [{id}]"));
-    }
+    });
 
     [McpServerTool(Name = "edit_items")]
     [Description(
@@ -129,11 +132,12 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
         "Send only the fields to change; omitted or null fields stay as they are; send amount 0 and unit \"\" to clear the quantity. " +
         "Get itemIds from get_items. Items can't be moved between lists - add to target list and delete from source. " +
         "Batch: send all items to change in one call. Returns the updated items in get_items format.")]
-    public async Task<string> EditItemsAsync(
+    public Task<string> EditItemsAsync(
         [Description("The list ID (from get_lists)")] string listId,
         [Description("The list's name exactly as get_lists shows it. Shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,
         [Description("Items to edit")] List<EditItemInput> items,
         CancellationToken ct = default)
+        => ToolErrors.GuardAsync("edit_items", logger, async () =>
     {
         TagList(listId, listName);
         ListonicTelemetry.Tag(ListonicTelemetry.Tags.ItemsCount, items.Count);
@@ -161,7 +165,7 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
         return updated.Count > 0
             ? string.Join("\n", updated.Select(FormatItem))
             : $"Updated {editedIds.Count} item(s).";
-    }
+    });
 
     [McpServerTool(Name = "delete_items")]
     [Description(
@@ -169,11 +173,12 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
         "Use this when the user wants an item gone (added by mistake, no longer needed) or asks to clear bought items - then delete only the checked ones. " +
         "Before deleting more than a few items or emptying a whole list, confirm with the user. " +
         "Get itemIds from get_items. Always pass confirmName alongside each itemId. Returns the deleted items in get_items format.")]
-    public async Task<string> DeleteItemsAsync(
+    public Task<string> DeleteItemsAsync(
         [Description("The list ID (from get_lists)")] string listId,
         [Description("The list's name exactly as get_lists shows it. Shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,
         [Description("Items to delete (from get_items)")] List<DeleteItemInput> items,
         CancellationToken ct = default)
+        => ToolErrors.GuardAsync("delete_items", logger, async () =>
     {
         TagList(listId, listName);
         ListonicTelemetry.Tag(ListonicTelemetry.Tags.ItemsCount, items.Count);
@@ -191,36 +196,38 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
         ListonicTelemetry.Outcome("deleted");
         logger.LogInformation("delete_items [{ListId}] {ListName}: deleted {Count} item(s)", listId, listName, deleted.Count);
         return deleted.Count > 0 ? string.Join("\n", deleted) : "No items deleted.";
-    }
+    });
 
     [McpServerTool(Name = "rename_list")]
     [Description("Rename an existing shopping list. On a shared list the new name is visible to everyone who shares it. This server can't create lists - tell the user to do that in the Listonic app.")]
-    public async Task<string> RenameListAsync(
+    public Task<string> RenameListAsync(
         [Description("The list ID (from get_lists)")] string listId,
         [Description("The list's current name exactly as get_lists shows it (not the new name). Shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,
         [Description("New name for the list")] string name,
         CancellationToken ct = default)
+        => ToolErrors.GuardAsync("rename_list", logger, async () =>
     {
         TagList(listId, listName);
         await api.RenameListAsync(listId, new RenameListRequest { Id = listId, Name = name }, ct);
         ListonicTelemetry.Outcome("renamed");
         logger.LogInformation("rename_list [{ListId}] {ListName} -> {NewName}", listId, listName, name);
         return $"List {listId} renamed to \"{name}\".";
-    }
+    });
 
     [McpServerTool(Name = "delete_list")]
     [Description("Move a whole shopping list to the Listonic trash; it can be restored from the trash in the app. On a shared list this removes it for everyone who shares it - get_lists shows whether a list is shared. Always confirm with the user, naming the list, before calling. To delete items but keep the list, use delete_items instead.")]
-    public async Task<string> DeleteListAsync(
+    public Task<string> DeleteListAsync(
         [Description("The list ID (from get_lists)")] string listId,
         [Description("The list's name exactly as get_lists shows it. Shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,
         CancellationToken ct = default)
+        => ToolErrors.GuardAsync("delete_list", logger, async () =>
     {
         TagList(listId, listName);
         await api.DeleteListAsync(listId, ct);
         ListonicTelemetry.Outcome("deleted");
         logger.LogInformation("delete_list [{ListId}] {ListName} moved to trash", listId, listName);
         return $"List {listId} moved to trash.";
-    }
+    });
 
     private static string FormatItem(ShoppingItem i)
     {
