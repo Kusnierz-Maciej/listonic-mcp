@@ -34,7 +34,7 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
         [property: Description("The item's current name exactly as get_items shows it - when several rows share that name, add the quantity, e.g. \"kefir (0.5 l)\", and \"[x]\" for a checked row if that's still ambiguous. Shown in the permission prompt so the user can confirm the right item; not sent to the API.")] string ConfirmName);
 
     [McpServerTool(Name = "get_lists", Title = "Get shopping lists", ReadOnly = true, Idempotent = true)]
-    [Description("List every shopping list the user can access (own and shared). Returns one line per list as \"[listId] name (private|shared) - N unchecked\". Call this first - every other tool needs a listId from here. Match the user's wording to a list name; if more than one list could fit, ask which one. This server has no categories or item notes and can't create lists or move items between lists - say so instead of looking for another tool.")]
+    [Description("List every shopping list the user can access (own and shared). Returns one line per list as \"[listId] name (private|shared) - N unchecked\". Call this first - every other tool except create_list needs a listId from here. Match the user's wording to a list name; if more than one list could fit, ask which one. This server has no categories or item notes and can't move items between lists - say so instead of looking for another tool.")]
     public Task<string> GetListsAsync(CancellationToken ct = default)
         => ToolErrors.GuardAsync("get_lists", logger, async () =>
     {
@@ -198,8 +198,28 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
         return deleted.Count > 0 ? string.Join("\n", deleted) : "No items deleted.";
     });
 
+    [McpServerTool(Name = "create_list", Title = "Create list", ReadOnly = false, Destructive = false, Idempotent = false)]
+    [Description(
+        "Create a new, empty shopping list owned by the user (private until they share it in the app). " +
+        "Call get_lists first: if a list with that name already exists, use it or ask the user instead of creating a duplicate. " +
+        "Returns the new list in get_lists format; add items to it with add_items using its listId.")]
+    public Task<string> CreateListAsync(
+        [Description("Name for the new list, in the user's language, e.g. \"Zakupy na weekend\".")] string name,
+        CancellationToken ct = default)
+        => ToolErrors.GuardAsync("create_list", logger, async () =>
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new ModelContextProtocol.McpException("The list name can't be empty.");
+
+        var list = await api.CreateListAsync(new CreateListRequest { Name = name.Trim() }, ct);
+        TagList(list.Id, list.Name);
+        ListonicTelemetry.Outcome("created");
+        logger.LogInformation("create_list [{ListId}] {ListName}", list.Id, list.Name);
+        return $"[{list.Id}] {(string.IsNullOrEmpty(list.Name) ? name.Trim() : list.Name)} (private) - 0 unchecked";
+    });
+
     [McpServerTool(Name = "rename_list", Title = "Rename list", ReadOnly = false, Destructive = false, Idempotent = true)]
-    [Description("Rename an existing shopping list. On a shared list the new name is visible to everyone who shares it. This server can't create lists - tell the user to do that in the Listonic app.")]
+    [Description("Rename an existing shopping list. On a shared list the new name is visible to everyone who shares it. To make a new list use create_list.")]
     public Task<string> RenameListAsync(
         [Description("The list ID (from get_lists)")] string listId,
         [Description("The list's current name exactly as get_lists shows it (not the new name). Shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,

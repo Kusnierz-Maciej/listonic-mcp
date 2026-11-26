@@ -27,6 +27,7 @@ public class ToolAnnotationTests
     [Arguments("add_items")]
     [Arguments("edit_items")]
     [Arguments("rename_list")]
+    [Arguments("create_list")]
     public async Task Writes_AreNotDestructive(string name)
     {
         await Assert.That(Tool(name).ReadOnly).IsFalse();

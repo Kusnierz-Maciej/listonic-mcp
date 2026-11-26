@@ -47,3 +47,27 @@ public class ToolOutputTests
         await Assert.That(await Tools.GetItemsAsync("1", "Zakupy")).IsEqualTo("List is empty.");
     }
 }
+
+public class CreateListToolTests
+{
+    [Test]
+    public async Task CreateList_ReturnsGetListsFormat_AndTrimsName()
+    {
+        var api = NSubstitute.Substitute.For<ListonicApiClient.IListonicApi>();
+        api.CreateListAsync(NSubstitute.Arg.Is<CreateListRequest>(r => r != null && r.Name == "Weekend"), NSubstitute.Arg.Any<CancellationToken>())
+            .Returns(Fake.List("42", "Weekend"));
+        var tools = new ListonicTools(api, Microsoft.Extensions.Logging.Abstractions.NullLogger<ListonicTools>.Instance);
+
+        await Assert.That(await tools.CreateListAsync("  Weekend ")).IsEqualTo("[42] Weekend (private) - 0 unchecked");
+    }
+
+    [Test]
+    public async Task CreateList_EmptyName_IsRejected()
+    {
+        var api = NSubstitute.Substitute.For<ListonicApiClient.IListonicApi>();
+        var tools = new ListonicTools(api, Microsoft.Extensions.Logging.Abstractions.NullLogger<ListonicTools>.Instance);
+
+        await Assert.ThrowsAsync<ModelContextProtocol.McpException>(() => tools.CreateListAsync(" "));
+        await api.DidNotReceiveWithAnyArgs().CreateListAsync(default!, default);
+    }
+}
