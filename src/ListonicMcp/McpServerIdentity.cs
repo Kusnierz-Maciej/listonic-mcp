@@ -6,9 +6,9 @@ namespace ListonicMcp;
 /// <summary>
 /// The server's MCP <c>serverInfo</c>: name, version, display title and icons. Icons are inlined as
 /// <c>data:</c> URIs (embedded from <c>wwwroot</c>) so clients can show them without knowing the
-/// server's public URL — it usually sits behind a proxy, and stdio mode has no URL at all. The favicon
-/// is listonic.com's own; the 192/512 px icons recreate it at high resolution from the "L" of the
-/// official listonic.com wordmark SVG on the brand green (#35B027).
+/// server's public URL — it usually sits behind a proxy, and stdio mode has no URL at all. The artwork is
+/// the Listonic app icon from its Google Play listing (512 px), with rounded corners for the favicon and
+/// the 192/512 px icons.
 /// </summary>
 internal static class McpServerIdentity
 {
