@@ -26,6 +26,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ListonicTokenStore>();
         services.TryAddSingleton<ListonicRateLimiter>();
         services.AddTransient<ListonicAuthHandler>();
+        services.TryAddTransient<IListonicLoginValidator, ListonicLoginValidator>();
 
         var api = services
             .AddRefitClient<IListonicApi>()
