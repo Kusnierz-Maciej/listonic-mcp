@@ -65,3 +65,5 @@ the unofficial Listonic API; CI runs them nightly against the latest release.
 - **Live tests never run in parallel**: every live test class carries `[NotInParallel(LiveApi.Serial)]`
   (one real account, one rate limit, shared `[test] ` cleanup).
 - Write only to lists the test creates, named with the `[test] ` prefix, and delete them in `finally`.
+- Every live test class also calls `LiveApi.SweepTestListsAsync()` from `[Before(HookType.Class)]` and
+  `[After(HookType.Class)]`: the before-sweep removes `[test] ` lists left by a crashed previous run.
