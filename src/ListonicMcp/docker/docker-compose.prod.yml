@@ -1,11 +1,28 @@
 services:
   listonic-mcp:
     container_name: listonic-mcp
-    image: ghcr.io/kusnierz-maciej/listonic-mcp:latest
+    image: ghcr.io/kusnierz-maciej/listonic-mcp:latest   # or pin a version, e.g. :v1.11.0
     ports:
       - "9011:8080"
     env_file:
+      # Secrets live here (API keys + token secret). See .env.example.
       - .env
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
+      # Non-secret settings — all overridable via env (Section__Key convention).
+      # Defaults shown; uncomment to change.
+      # Security — require an allowlisted MCP API key (set false to drop the key gate; Listonic
+      # credentials are still required). When true, at least one Security__AllowedApiKeys__N must be set.
+      #- Security__RequireMcpApiKey=true
+      # Logging
+      #- Logging__LogLevel__Default=Information
+      #- Logging__LogLevel__Microsoft.AspNetCore=Warning
+      #- Logging__LogLevel__System.Net.Http.HttpClient=Warning
+      #- Logging__LogLevel__ModelContextProtocol=Warning
+      #- Logging__Console__FormatterName=simple
+      #- Logging__Console__FormatterOptions__SingleLine=true
+      #- Logging__Console__FormatterOptions__IncludeScopes=true
+      # Telemetry (OpenTelemetry OTLP export of traces + logs; off by default)
+      #- Telemetry__Enabled=false
+      #- Telemetry__OtlpEndpoint=http://alloy:4317
     restart: unless-stopped

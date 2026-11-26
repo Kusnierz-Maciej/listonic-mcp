@@ -1,0 +1,33 @@
+services:
+  listonic-mcp:
+    container_name: listonic-mcp
+    image: ghcr.io/kusnierz-maciej/listonic-mcp:latest   # or pin a version, e.g. :v1.11.0
+    ports:
+      - "9011:8080"
+    env_file:
+      # Secrets live here (API keys + token secret). See .env.example.
+      - .env
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      # Non-secret settings — all overridable via env (Section__Key convention).
+      # Defaults shown; uncomment to change.
+
+      # Security — require an allowlisted MCP API key (set false to drop the key gate; Listonic
+      # credentials are still required). When true, at least one Security__AllowedApiKeys__N must be set.
+      #- Security__RequireMcpApiKey=true
+
+      # Logging — human-readable single-line console (good for `docker logs` / Container Manager on the NAS).
+      - Logging__LogLevel__Default=Information
+      - Logging__LogLevel__Microsoft.AspNetCore=Warning
+      - Logging__LogLevel__System.Net.Http.HttpClient=Warning
+      - Logging__LogLevel__ModelContextProtocol=Warning
+      - Logging__Console__FormatterName=simple
+      - Logging__Console__FormatterOptions__SingleLine=true
+      - Logging__Console__FormatterOptions__IncludeScopes=true
+
+      # Telemetry — OTLP export to the logging stack's Alloy receiver.
+      #- Telemetry__Enabled=true
+      #- Telemetry__OtlpEndpoint=http://alloy:4317
+    # No volumes: the server keeps no state on disk (OAuth tokens are derived from the token secret),
+    # so the Synology bind-mount/ACL `user:` workaround is not needed.
+    restart: unless-stopped
