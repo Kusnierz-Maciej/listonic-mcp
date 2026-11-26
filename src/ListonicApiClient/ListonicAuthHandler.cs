@@ -9,11 +9,16 @@ public class ListonicAuthHandler : DelegatingHandler
 {
     private readonly IListonicCredentialProvider _credentials;
     private readonly ListonicTokenStore _tokens;
+    private readonly IHttpClientFactory _httpClientFactory;
 
-    public ListonicAuthHandler(IListonicCredentialProvider credentials, ListonicTokenStore tokens)
+    public ListonicAuthHandler(
+        IListonicCredentialProvider credentials,
+        ListonicTokenStore tokens,
+        IHttpClientFactory httpClientFactory)
     {
         _credentials = credentials;
         _tokens = tokens;
+        _httpClientFactory = httpClientFactory;
     }
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -39,10 +44,11 @@ public class ListonicAuthHandler : DelegatingHandler
         return response;
     }
 
-    private static async Task<string> LoginAsync(ListonicClientOptions credentials, CancellationToken cancellationToken)
+    private async Task<string> LoginAsync(ListonicClientOptions credentials, CancellationToken cancellationToken)
     {
+        // Factory client: pooled handlers (no socket exhaustion) and the shared rate limit.
         var loginApi = RestService.For<IListonicApi>(
-            new HttpClient { BaseAddress = new Uri(ListonicClientOptions.BaseUrl) });
+            _httpClientFactory.CreateClient(ServiceCollectionExtensions.LoginClientName));
 
         var response = await loginApi.LoginAsync(new LoginRequest
         {
