@@ -2,6 +2,10 @@
 
 Unofficial MCP server for [Listonic](https://listonic.com) grocery lists, built on .NET 10 and ASP.NET Core.
 
+## Listonic API compatibility
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/Kusnierz-Maciej/listonic-mcp/verify-api-contract.yml?branch=main&label=Listonic%20api%20compatibility)  
+![Dynamic JSON Badge](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fapi.github.com%2Frepos%2FKusnierz-Maciej%2Flistonic-mcp%2Factions%2Fworkflows%2F403783468%2Fruns%3Fstatus%3Dcompleted%26per_page%3D1&query=%24.workflow_runs%5B0%5D.run_started_at&label=Listonic%20api%20compatibility&cacheSeconds=300)    
+
 ## MCP tools
 
 | Tool | Description |
