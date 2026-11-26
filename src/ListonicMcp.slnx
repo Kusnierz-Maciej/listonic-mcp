@@ -2,4 +2,5 @@
   <Project Path="ListonicApiClient/ListonicApiClient.csproj" />
   <Project Path="ListonicApiClient.Tests/ListonicApiClient.Tests.csproj" />
   <Project Path="ListonicMcp/ListonicMcp.csproj" />
+  <Project Path="Listonic.Sandbox/Listonic.Sandbox.csproj" />
 </Solution>

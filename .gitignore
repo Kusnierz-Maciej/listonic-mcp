@@ -21,3 +21,6 @@ TestResults/
 # Claude Code local state
 .claude/settings.local.json
 .claude/worktrees/
+
+# Listonic.Sandbox dump output (contains live tokens and passwords — never commit)
+src/Listonic.Sandbox/out/
