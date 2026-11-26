@@ -1,0 +1,77 @@
+# OpenTelemetry
+
+The HTTP host exports traces and logs via OTLP when `Telemetry:Enabled` is `true`.
+Telemetry is **off by default** in all environments — enable it explicitly when needed. (Stdio mode
+does not export telemetry.)
+
+Without telemetry, console logs still carry a `RequestId`/`TraceId` scope on every request and the
+user's email on `/mcp` requests, so a single request's lines can be grouped in `docker logs` or Loki.
+
+## Local testing with Aspire Dashboard
+
+Microsoft's Aspire Dashboard is a good local OTLP viewer for .NET — structured logs with scopes,
+traces with per-span timings, and both correlated. It runs standalone via the Aspire CLI.
+
+```sh
+brew install --cask microsoft/aspire/aspire   # once
+aspire dashboard run
+```
+
+Run the app with telemetry on (the default endpoint is already `http://localhost:4317`):
+
+```sh
+Telemetry__Enabled=true dotnet run --project src/ListonicMcp
+```
+
+Open **http://localhost:18888** → Structured Logs or Traces → service `listonic-mcp`.
+
+## Production
+
+Set the env vars in your compose file (both compose files have them commented out):
+
+```yaml
+- Telemetry__Enabled=true
+- Telemetry__OtlpEndpoint=http://alloy:4317
+```
+
+This sends logs and traces to e.g. an Alloy collector, which forwards logs to Loki and traces to Tempo.
+The endpoint must be an absolute `http(s)://` URI — otherwise the server refuses to start.
+
+Each trace is built from four span sources:
+
+| Source | Spans |
+|---|---|
+| ASP.NET Core instrumentation | incoming request (root), e.g. `POST /mcp` — tagged `user.email`; unhandled exceptions recorded. Static icons and `/.well-known/*` are not traced. |
+| `Experimental.ModelContextProtocol` (MCP SDK) | one per JSON-RPC request, e.g. `tools/call get_items` — tagged `gen_ai.tool.name`, `mcp.method.name`, `mcp.session.id` |
+| `System.Net.Http` (.NET built-in) | each outbound Listonic API call (query strings redacted, the .NET default) |
+| `Listonic` (app) | `listonic.login` — only on a token-cache miss, so it shows when (and how often) the server really logs in |
+
+**Business tags** on the tool span (`listonic.*`): `list.id`, `list.name`, `lists.count`,
+`items.count`, and `outcome`.
+
+**Outcomes** — failures the tool reports as a plain error message set span status **Error**:
+
+| `listonic.outcome` | Error? |
+|---|---|
+| `ok`, `created`, `added`, `edited`, `deleted`, `renamed` | no |
+| `not_found`, `forbidden`, `credentials_rejected`, `rate_limited`, `unavailable`, `rejected_request` | yes |
+
+A `401` from Listonic adds a `listonic.token_rejected_retrying` event to the tool span (explains the
+duplicate HTTP span that follows the re-login).
+
+Useful TraceQL:
+
+```
+{ span.gen_ai.tool.name = "add_items" }
+{ span.listonic.list.name = "Zakupy" }
+{ span.listonic.outcome = "credentials_rejected" }
+{ span.user.email = "someone@example.com" }
+{ status = error }
+```
+
+> **Personal data:** traces carry the user's email and list names (and logs carry item counts and
+> list names). That is intended for a self-hosted stack — don't point `Telemetry:OtlpEndpoint` at a
+> shared or third-party backend without revisiting this.
+
+Telemetry off costs effectively nothing: with no listener, `StartActivity` returns `null` and every
+tag call is a null check.
