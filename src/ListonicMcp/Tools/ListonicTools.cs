@@ -33,7 +33,7 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
         [property: Description("Item ID (from get_items)")] string ItemId,
         [property: Description("The item's current name exactly as get_items shows it - when several rows share that name, add the quantity, e.g. \"kefir (0.5 l)\", and \"[x]\" for a checked row if that's still ambiguous. Shown in the permission prompt so the user can confirm the right item; not sent to the API.")] string ConfirmName);
 
-    [McpServerTool(Name = "get_lists")]
+    [McpServerTool(Name = "get_lists", Title = "Get shopping lists", ReadOnly = true, Idempotent = true)]
     [Description("List every shopping list the user can access (own and shared). Returns one line per list as \"[listId] name (private|shared) - N unchecked\". Call this first - every other tool needs a listId from here. Match the user's wording to a list name; if more than one list could fit, ask which one. This server has no categories or item notes and can't create lists or move items between lists - say so instead of looking for another tool.")]
     public Task<string> GetListsAsync(CancellationToken ct = default)
         => ToolErrors.GuardAsync("get_lists", logger, async () =>
@@ -60,7 +60,7 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
         }));
     });
 
-    [McpServerTool(Name = "get_items")]
+    [McpServerTool(Name = "get_items", Title = "Get list items", ReadOnly = true, Idempotent = true)]
     [Description(
         "Get every item on one list. Unchecked items (still to buy) come first, then checked ones (bought / ticked off), each as \"[ ] [itemId] name (amount unit)\" or \"[x] …\". " +
         "When the user asks what to buy, report only unchecked items; mention checked ones only if asked. " +
@@ -85,7 +85,7 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
         return string.Join("\n", items.OrderBy(i => i.Checked ? 1 : 0).Select(FormatItem));
     });
 
-    [McpServerTool(Name = "add_items")]
+    [McpServerTool(Name = "add_items", Title = "Add items", ReadOnly = false, Destructive = false, Idempotent = false)]
     [Description(
         "Add one or more items to a list in a single call; new items start unchecked. " +
         "Put only the product in name (in the user's language, e.g. \"mleko\"), the number in amount and the unit in unit - never the quantity inside the name. " +
@@ -125,7 +125,7 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
             : string.Join("\n", addedIds.Select(id => $"[ ] [{id}]"));
     });
 
-    [McpServerTool(Name = "edit_items")]
+    [McpServerTool(Name = "edit_items", Title = "Edit items (tick off, rename, amount)", ReadOnly = false, Destructive = false, Idempotent = true)]
     [Description(
         "Change items already on a list: tick them off when bought (isChecked: true), untick (false), rename, or change amount/unit. " +
         "\"I bought X\" = tick it off, do not delete. " +
@@ -167,7 +167,7 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
             : $"Updated {editedIds.Count} item(s).";
     });
 
-    [McpServerTool(Name = "delete_items")]
+    [McpServerTool(Name = "delete_items", Title = "Delete items", ReadOnly = false, Destructive = true, Idempotent = false)]
     [Description(
         "Permanently delete items from a list; this can't be undone. To mark something as bought, tick it off with edit_items instead. " +
         "Use this when the user wants an item gone (added by mistake, no longer needed) or asks to clear bought items - then delete only the checked ones. " +
@@ -198,7 +198,7 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
         return deleted.Count > 0 ? string.Join("\n", deleted) : "No items deleted.";
     });
 
-    [McpServerTool(Name = "rename_list")]
+    [McpServerTool(Name = "rename_list", Title = "Rename list", ReadOnly = false, Destructive = false, Idempotent = true)]
     [Description("Rename an existing shopping list. On a shared list the new name is visible to everyone who shares it. This server can't create lists - tell the user to do that in the Listonic app.")]
     public Task<string> RenameListAsync(
         [Description("The list ID (from get_lists)")] string listId,
@@ -214,7 +214,7 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
         return $"List {listId} renamed to \"{name}\".";
     });
 
-    [McpServerTool(Name = "delete_list")]
+    [McpServerTool(Name = "delete_list", Title = "Delete list (to trash)", ReadOnly = false, Destructive = true, Idempotent = false)]
     [Description("Move a whole shopping list to the Listonic trash; it can be restored from the trash in the app. On a shared list this removes it for everyone who shares it - get_lists shows whether a list is shared. Always confirm with the user, naming the list, before calling. To delete items but keep the list, use delete_items instead.")]
     public Task<string> DeleteListAsync(
         [Description("The list ID (from get_lists)")] string listId,
