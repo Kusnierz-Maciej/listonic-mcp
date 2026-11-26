@@ -40,9 +40,15 @@ Encodings are handled by `ZeroOneBoolConverter` and `DecimalStringConverter`.
 
 ## Other
 
-- `GET /categoriesv2` — flat list of product categories (26 on a Polish account): `Id`, `Name`, `IconId`,
-  `Order`, `AutoOrder`, `Color`, `ColorDark`, `Standard`. Items reference them by `CategoryId`, which the API
-  assigns automatically on add. Not modelled yet (future categories feature; dump with `dump-categories`).
+- `GET /categoriesv2` — flat list of product categories (26 on a Polish account, names in English, e.g.
+  `Dairy & eggs`, `Bakery`, `Other`): `Id`, `Name`, `IconId`, `Order`, `AutoOrder`, `Color`, `ColorDark`,
+  `Standard`. Not modelled yet (future categories feature; dump with `dump-categories`).
+- **Category assignment** (probed 2026-11-27 with `category-assign`): the server always fills `CategoryId` on
+  add, from the name alone — Polish and English both work (`mleko`/`milk` → Dairy & eggs, `szampon` → Personal
+  care, `kombucha` → Beverages). Unrecognised names (typos like `mlekko`, nonsense) get `1` = **Other**; nothing
+  is ever left empty. Every assigned id was in `/categoriesv2`, and re-reading returns the same ids. A future
+  categories tool should read `/categoriesv2` at runtime (not hard-code ids), so categories Listonic adds later
+  show up automatically. Nothing relies on this yet — add contract tests when a feature does.
 - `GET /account/userinfo` — basic account info.
 - Errors use RFC 7807 problem details, e.g. `404 {"title":"The specified resource was not found.",
   "detail":"Entity \"ShoppingList\" (999999999) was not found.", …}`. The tool layer maps `404` → "not found",

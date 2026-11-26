@@ -11,6 +11,7 @@ public static class ScenarioRegistry
         new ToolsSmokeScenario(),
         new LoginProbeScenario(),
         new RoundtripScenario(),
+        new CategoryAssignScenario(),
     ];
 
     public static IScenario? Find(string name) =>

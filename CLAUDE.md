@@ -41,8 +41,8 @@ dump directory at the end — read the `.http` files there to analyse the issue.
   `Listonic__Password` env vars.
 - Add a probe by implementing `IScenario` (in `Scenarios/`) and registering it in `ScenarioRegistry`.
   Each scenario carries a WHAT/WHY/FOUND doc header. Read-only: `dump-lists`, `dump-items`,
-  `dump-categories`, `tools-smoke`. `login-probe` touches no data (run sparingly). `roundtrip` writes,
-  but only to a `[test] sandbox …` list it creates and deletes.
+  `dump-categories`, `tools-smoke`. `login-probe` touches no data (run sparingly). `roundtrip` and
+  `category-assign` write, but only to a `[test] …` list they create and delete.
 - The dump handler is attached innermost on both the API and login clients via the optional
   `configureClient` hook on `AddListonicApiClient`, so it captures each physical send — including the
   auth handler's 401 retry re-send.
