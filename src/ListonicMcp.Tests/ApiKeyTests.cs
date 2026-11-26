@@ -28,3 +28,17 @@ public class ApiKeyTests
         await Assert.That(validator.Validate(null, new SecurityOptions { AllowedApiKeys = ["k"] }).Succeeded).IsTrue();
     }
 }
+
+public class OptionalApiKeyTests
+{
+    [Test]
+    public async Task KeysOff_AllowsAnything_AndNeedsNoConfiguredKey()
+    {
+        var options = new SecurityOptions { RequireMcpApiKey = false };
+        var allowlist = new ApiKeyAllowlist(Options.Create(options));
+
+        await Assert.That(allowlist.RequireApiKey).IsFalse();
+        await Assert.That(allowlist.IsAllowed(null)).IsTrue();
+        await Assert.That(new SecurityOptionsValidator().Validate(null, options).Succeeded).IsTrue();
+    }
+}

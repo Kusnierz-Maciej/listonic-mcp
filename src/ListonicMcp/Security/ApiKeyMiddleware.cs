@@ -3,7 +3,7 @@ using System.Text;
 namespace ListonicMcp.Security;
 
 /// <summary>
-/// Gates <c>/mcp</c> with <c>X-Api-Key</c> (an allowlisted MCP server key) plus
+/// Gates <c>/mcp</c> with <c>X-Api-Key</c> (an allowlisted MCP server key, unless keys are turned off) plus
 /// <c>Authorization: Basic base64(email:password)</c> carrying the caller's own Listonic credentials,
 /// which are stashed in <see cref="HttpContext.Items"/> for the credential provider. There is no
 /// server-side default account.
@@ -15,8 +15,9 @@ public class ApiKeyMiddleware(RequestDelegate next)
 
     public async Task InvokeAsync(HttpContext context, ApiKeyAllowlist allowlist, ILogger<ApiKeyMiddleware> logger)
     {
+        // The key gate is enforced unless Security:RequireMcpApiKey is off.
         var provided = context.Request.Headers["X-Api-Key"].FirstOrDefault();
-        if (!allowlist.IsAllowed(provided))
+        if (allowlist.RequireApiKey && !allowlist.IsAllowed(provided))
         {
             logger.LogWarning("Rejected /mcp request: missing or incorrect X-Api-Key.");
             context.Response.StatusCode = StatusCodes.Status401Unauthorized;
