@@ -1,19 +1,14 @@
 using ListonicApiClient;
+using Microsoft.Extensions.Options;
 
 namespace ListonicMcp.Listonic;
 
-/// <summary>Stdio mode: credentials come from configuration (Listonic__Email / Listonic__Password).</summary>
-public class ConfigurationCredentialProvider(IConfiguration configuration) : IListonicCredentialProvider
+/// <summary>Stdio mode: credentials come from configuration (Listonic__Email / Listonic__Password), validated at startup.</summary>
+public class ConfigurationCredentialProvider(IOptions<StdioCredentialsOptions> options) : IListonicCredentialProvider
 {
-    public ListonicClientOptions GetCredentials()
+    public ListonicClientOptions GetCredentials() => new()
     {
-        var email = configuration["Listonic:Email"];
-        var password = configuration["Listonic:Password"];
-
-        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
-            throw new InvalidOperationException(
-                "Listonic credentials are required. Set Listonic__Email and Listonic__Password.");
-
-        return new ListonicClientOptions { Email = email, Password = password };
-    }
+        Email = options.Value.Email!,
+        Password = options.Value.Password!,
+    };
 }

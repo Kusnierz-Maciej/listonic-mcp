@@ -23,6 +23,11 @@ builder.Services
 
 var app = builder.Build();
 
+// Fail fast on invalid configuration with a readable message (and exit code 1) before anything is
+// served. Host start would also run these ValidateOnStart checks, but it logs a stack trace first.
+if (!StartupValidation.TryValidate(app.Services))
+    return;
+
 app.UseWhen(
     ctx => ctx.Request.Path.StartsWithSegments("/mcp"),
     branch => branch.UseMiddleware<ApiKeyMiddleware>());
