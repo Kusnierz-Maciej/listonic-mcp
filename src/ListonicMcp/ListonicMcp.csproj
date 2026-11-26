@@ -17,6 +17,11 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="ListonicMcp.Tests" />
+        <InternalsVisibleTo Include="Listonic.Sandbox" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ContainerPort Include="8080" Type="tcp" />
     </ItemGroup>
 
