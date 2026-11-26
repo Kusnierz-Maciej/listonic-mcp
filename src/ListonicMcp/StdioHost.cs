@@ -31,7 +31,7 @@ public static class StdioHost
             options.ServerInstructions = McpInstructions.Text;
         })
             .WithStdioServerTransport()
-            .WithTools<ListonicTools>();
+            .WithListonicTools();
 
         var host = builder.Build();
         if (!StartupValidation.TryValidate(host.Services))

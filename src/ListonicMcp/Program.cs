@@ -92,7 +92,7 @@ builder.Services
         options.ServerInstructions = McpInstructions.Text;
     })
     .WithHttpTransport()
-    .WithTools<ListonicTools>();
+    .WithListonicTools();
 
 var app = builder.Build();
 
