@@ -22,6 +22,12 @@
     </ItemGroup>
 
     <ItemGroup>
+        <!-- Inlined into the MCP serverInfo icons (see McpServerIdentity); also served as static files. -->
+        <EmbeddedResource Include="wwwroot\icon-192.png" LogicalName="ListonicMcp.Icons.icon-192.png" />
+        <EmbeddedResource Include="wwwroot\icon-512.png" LogicalName="ListonicMcp.Icons.icon-512.png" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ContainerPort Include="8080" Type="tcp" />
     </ItemGroup>
 

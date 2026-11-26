@@ -17,7 +17,11 @@ builder.Services.AddTransient<IListonicCredentialProvider, HttpContextCredential
 builder.Services.AddListonicApiClient();
 
 builder.Services
-    .AddMcpServer(options => options.ServerInstructions = McpInstructions.Text)
+    .AddMcpServer(options =>
+    {
+        options.ServerInfo = McpServerIdentity.Create();
+        options.ServerInstructions = McpInstructions.Text;
+    })
     .WithHttpTransport()
     .WithTools<ListonicTools>();
 
@@ -27,6 +31,10 @@ var app = builder.Build();
 // served. Host start would also run these ValidateOnStart checks, but it logs a stack trace first.
 if (!StartupValidation.TryValidate(app.Services))
     return;
+
+// Favicon / touch icons (wwwroot) for the OAuth sign-in page and for clients that look up a
+// connector's icon from the server origin. Public — served before the /mcp gate.
+app.UseStaticFiles();
 
 app.UseWhen(
     ctx => ctx.Request.Path.StartsWithSegments("/mcp"),
