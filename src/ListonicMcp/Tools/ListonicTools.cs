@@ -244,6 +244,9 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
         => ToolErrors.GuardAsync("rename_list", logger, async () =>
     {
         TagList(listId, listName);
+        // Listonic answers 200 to a rename of an unknown list id; GET /lists/{id} 404s for those
+        // (mapped to "not found" by the guard), so a wrong id isn't reported as renamed.
+        await api.GetListAsync(listId, ct);
         await api.RenameListAsync(listId, new RenameListRequest { Id = listId, Name = name }, ct);
         ListonicTelemetry.Outcome("renamed");
         logger.LogInformation("rename_list [{ListId}] {ListName} -> {NewName}", listId, listName, name);

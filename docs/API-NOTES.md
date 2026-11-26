@@ -21,19 +21,19 @@ full. Last verified with a real account on 2026-11-27 (`login-probe`, `roundtrip
 
 | Call | Notes |
 |---|---|
-| `GET /lists?includeShares=&archive=&includeItems=` | `ItemsCount`, `CheckedItemsCount`, `IsOwner` (0/1), `Shares[]` (the owner counts as one share, so `Shares.Count > 1` = shared) |
+| `GET /lists?includeShares=&archive=&includeItems=` | `ItemsCount`, `CheckedItemsCount`, `IsOwner` (0/1), `Shares[]` — a new private list has exactly one share (the owner), so `Shares.Count > 1` = shared |
 | `GET /lists/{id}` | single list. Unknown id → `404` |
 | `POST /lists` `{ "Name": … }` | returns the created list with its id |
-| `PATCH /lists/{id}` `{ "Id": …, "Name": … }` | rename |
-| `DELETE /lists/{id}` | soft delete — moves to the trash |
+| `PATCH /lists/{id}` `{ "Id": …, "Name": … }` | rename. **Unknown id → `200` (silent)** — `rename_list` checks `GET /lists/{id}` first |
+| `DELETE /lists/{id}` | moves the list to the app's trash. Afterwards the API returns `404` for it and it isn't listed even with `archive=true`. Unknown id → `404` |
 
 ## Items
 
 | Call | Notes |
 |---|---|
-| `GET /lists/{id}/items` | `Checked` is `0`/`1`; `Amount` is a **string** (may use `,` or `.` and spaces); `Unit` is free text |
+| `GET /lists/{id}/items` | `Checked` is `0`/`1`; `Amount` is a **string** (may use `,` or `.` and spaces) — `""` when added without a quantity, `"0"` after clearing; `Unit` is free text. Names keep Unicode (Polish letters) |
 | `POST /lists/{id}/items` `{ name, amount, unit, … }` | `201` with the item (`Id`, `Amount` as string, `Checked: 0`, `CategoryId` auto-assigned, `Creator`) and a `Location` header |
-| `PATCH /lists/{id}/items/{itemId}` | partial update; omitted fields stay as they are; `amount` sent as a string. Unknown item → `404` |
+| `PATCH /lists/{id}/items/{itemId}` | partial update; omitted fields stay as they are; `amount` sent as a string; `amount 0` + `unit ""` clears the quantity. Unknown item → `404` |
 | `DELETE /lists/{id}/items/{itemId}` | permanent. **Unknown item → `200` with no body** (silent) — `delete_items` checks ids against the list first |
 
 Encodings are handled by `ZeroOneBoolConverter` and `DecimalStringConverter`.
@@ -49,6 +49,29 @@ Encodings are handled by `ZeroOneBoolConverter` and `DecimalStringConverter`.
   `403` → "no access", other `4xx` → "rejected the request".
 - **`GET /lists/{unknown}/items` returns `200 []`**, not 404 — `get_items` re-checks `GET /lists/{id}` when
   it gets an empty list, so a wrong id isn't reported as "List is empty".
+
+- An invalid or expired bearer token gets `401` — the only status that triggers the re-login.
+
+## Contracts guarded by live tests
+
+Each behaviour the code depends on has a `[Category("LiveApi")]` test (run nightly against the latest
+release by *Verify Listonic API contract compatibility*). Live test classes are `[NotInParallel]` on one key.
+
+| Contract | Code that relies on it | Test |
+|---|---|---|
+| Login with form + client credentials → Bearer token, ≥ 1 h | auth handler, OAuth sign-in | `Login_Valid_IsOk_WithDayLongToken` |
+| Wrong password / unknown email → 400 "Unauthorized token" | `ListonicLogin.Classify` | `Login_WrongPassword_…`, `Login_UnknownEmail_…` |
+| Invalid token → 401 | re-login in `ListonicAuthHandler` | `InvalidBearerToken_Is401` |
+| Unknown list: GET 404, items 200 [], rename 200, delete 404 | `get_items`, `rename_list`, `delete_list`, error mapping | `GetList_UnknownId_…`, `GetItems_UnknownList_…`, `RenameList_UnknownId_…`, `DeleteList_UnknownId_…` |
+| Unknown item: PATCH 404, DELETE silent 200 | `edit_items`, `delete_items` | `UnknownItem_PatchIs404_DeleteIsSilent200` |
+| Deleted list is gone from the API | `delete_list` wording | `DeletedList_IsGoneFromApi_EvenWithArchive` |
+| New list: Id + Name in response, one share, owner | `create_list`, `get_lists` private/shared | `NewList_IsPrivate_OneShare_Owned_WithName` |
+| Counts and shares populated | `get_lists` unchecked count | `GetLists_WithIncludeShares_PopulatesCountsAndShares` |
+| Add returns id, amount as string, unchecked | `add_items` | `AddItem_ReturnsFullItem_…`, `AddItem_*` |
+| No amount = "", clear = "0"/"", Unicode names | `FormatItem`, `edit_items` | `ItemQuantity_…` |
+| Partial PATCH keeps other fields; check/rename/amount/unit | `edit_items` | `UpdateItem_*` |
+| Delete / rename / create / get list | list tools | `DeleteList_*`, `RenameList_*`, `CreateList_*`, `GetList_*` |
+| Categories: flat array with Id + Name | planned categories feature | `Categories_AreFlatList_WithIdAndName` |
 
 ## Client-side rate limit
 

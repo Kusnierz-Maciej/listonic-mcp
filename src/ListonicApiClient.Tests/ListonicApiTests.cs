@@ -4,6 +4,7 @@ using ListonicApiClient.Models.Lists;
 namespace ListonicApiClient.Tests;
 
 [Category("LiveApi")]
+[NotInParallel(LiveApi.Serial)]
 public class ListonicApiTests
 {
     private const string TestPrefix = "[test] ";

@@ -106,3 +106,23 @@ public class SilentApiCasesTests
         await _api.DidNotReceive().DeleteItemAsync("1", "zzz", NSubstitute.Arg.Any<CancellationToken>());
     }
 }
+
+public class RenameListToolTests
+{
+    [Test]
+    public async Task RenameList_UnknownId_IsNotFound_AndDoesNotRename()
+    {
+        var api = NSubstitute.Substitute.For<ListonicApiClient.IListonicApi>();
+        var notFound = await Refit.ApiException.Create(
+            new HttpRequestMessage(HttpMethod.Get, "https://api.listonic.com/api/lists/404"), HttpMethod.Get,
+            new HttpResponseMessage(System.Net.HttpStatusCode.NotFound), new Refit.RefitSettings());
+        NSubstitute.ExceptionExtensions.ExceptionExtensions.ThrowsAsync(
+            api.GetListAsync("404", NSubstitute.Arg.Any<CancellationToken>()), notFound);
+        var tools = new ListonicTools(api, Microsoft.Extensions.Logging.Abstractions.NullLogger<ListonicTools>.Instance);
+
+        var ex = await Assert.ThrowsAsync<ModelContextProtocol.McpException>(() => tools.RenameListAsync("404", "Old", "New"));
+
+        await Assert.That(ex!.Message).Contains("couldn't find that list or item");
+        await api.DidNotReceiveWithAnyArgs().RenameListAsync(default!, default!, default);
+    }
+}
