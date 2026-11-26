@@ -58,3 +58,29 @@ public class ToolSchemaTests
         }
     }
 }
+
+public class ToolArgumentBindingTests
+{
+    [Test]
+    public async Task NullableStrings_KeepStringType_InSchema()
+    {
+        var edit = ToolRegistration.CreateTools().Single(t => t.ProtocolTool.Name == "edit_items").ProtocolTool.InputSchema;
+        var unit = edit.GetProperty("properties").GetProperty("items").GetProperty("items").GetProperty("properties").GetProperty("unit");
+
+        var types = unit.GetProperty("anyOf").EnumerateArray().Select(b => b.GetProperty("type").GetString()!).ToList();
+        await Assert.That(types).IsEquivalentTo(new[] { "string", "null" });
+    }
+
+    [Test]
+    [Arguments("{\"listId\": 123456789012}", "123456789012")]
+    [Arguments("{\"listId\": \"42\"}", "42")]
+    public async Task StringParameters_AcceptJsonNumbers(string json, string expected)
+    {
+        var options = new System.Text.Json.JsonSerializerOptions();
+        options.Converters.Add(new ToolRegistration.LenientStringConverter());
+
+        var value = System.Text.Json.JsonSerializer.Deserialize<string>(System.Text.Json.JsonDocument.Parse(json).RootElement.GetProperty("listId"), options);
+
+        await Assert.That(value).IsEqualTo(expected);
+    }
+}
