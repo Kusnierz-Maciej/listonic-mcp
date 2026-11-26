@@ -52,3 +52,16 @@ dump directory at the end — read the `.http` files there to analyse the issue.
 
 This is a real account. Keep casual probing read-only; write tests only on lists prefixed `[test] `
 that the scenario/test creates and deletes itself.
+
+## Live API tests = the API contract
+
+The live tests (`[Category("LiveApi")]` in `src/ListonicApiClient.Tests`) are the contract check against
+the unofficial Listonic API; CI runs them nightly against the latest release.
+
+- **Every API behaviour the code relies on needs a live test** — status codes (including silent `200`s
+  the tools work around), payload shapes and encodings. When code starts depending on a new behaviour,
+  add the test in `LiveApiContractTests` and a row in the contract table in `docs/API-NOTES.md`.
+  Verify the behaviour with the sandbox first.
+- **Live tests never run in parallel**: every live test class carries `[NotInParallel(LiveApi.Serial)]`
+  (one real account, one rate limit, shared `[test] ` cleanup).
+- Write only to lists the test creates, named with the `[test] ` prefix, and delete them in `finally`.
