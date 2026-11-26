@@ -5,6 +5,7 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <Version>1.10.2</Version>
+        <UserSecretsId>listonic-mcp</UserSecretsId>
     </PropertyGroup>
 
     <PropertyGroup>
