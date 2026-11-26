@@ -7,6 +7,7 @@ public class LoginClassificationTests
     [Test]
     [Arguments(HttpStatusCode.Unauthorized, null)]
     [Arguments(HttpStatusCode.Forbidden, null)]
+    [Arguments(HttpStatusCode.BadRequest, """{"Message":"Unauthorized token. Token is invalid"}""")]
     [Arguments(HttpStatusCode.BadRequest, """{"error":"invalid_grant"}""")]
     [Arguments(HttpStatusCode.BadRequest, null)]
     public async Task CredentialRejections_AreBadCredentials(HttpStatusCode status, string? body) =>
@@ -28,6 +29,6 @@ public class LoginClassificationTests
 
     [Test]
     public async Task Detail_NeverContainsBody() =>
-        await Assert.That(ListonicLogin.Classify(HttpStatusCode.BadRequest, "invalid_grant secret").Detail!)
+        await Assert.That(ListonicLogin.Classify(HttpStatusCode.BadRequest, "Unauthorized token secret").Detail!)
             .DoesNotContain("secret");
 }

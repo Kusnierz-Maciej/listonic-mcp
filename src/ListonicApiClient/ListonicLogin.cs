@@ -53,10 +53,11 @@ public static class ListonicLogin
     }
 
     /// <summary>
-    /// Maps a failed login response to an outcome. The login endpoint is OAuth-style, so a credential
-    /// rejection is 400 (<c>invalid_grant</c> / <c>invalid_request</c>), 401 or 403. Everything else —
-    /// 429, 5xx, other 4xx — is an API problem, not a wrong password.
-    /// PROVISIONAL until confirmed with the sandbox <c>login-probe</c> scenario (see docs/API-NOTES.md).
+    /// Maps a failed login response to an outcome. Listonic answers a bad login (unknown email, wrong
+    /// password, blank fields) with HTTP 400 <c>{"Message":"Unauthorized token. Token is invalid"}</c>
+    /// (observed 2026-11-27, see docs/API-NOTES.md); 401/403 are treated the same. A 400 that names the
+    /// OAuth client or grant type is our bug, not the user's password, so it is an API error — as are
+    /// 429, 5xx and any other status.
     /// </summary>
     public static LoginOutcome Classify(HttpStatusCode status, string? body)
     {
@@ -64,11 +65,11 @@ public static class ListonicLogin
         return status switch
         {
             HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden => LoginOutcome.Bad(detail),
-            HttpStatusCode.BadRequest when body is null
-                || body.Contains("invalid_grant", StringComparison.OrdinalIgnoreCase)
-                || body.Contains("invalid_request", StringComparison.OrdinalIgnoreCase)
-                || body.Contains("password", StringComparison.OrdinalIgnoreCase)
-                => LoginOutcome.Bad($"{detail} invalid_grant"),
+            HttpStatusCode.BadRequest when body is not null
+                && (body.Contains("invalid_client", StringComparison.OrdinalIgnoreCase)
+                    || body.Contains("unsupported_grant_type", StringComparison.OrdinalIgnoreCase))
+                => LoginOutcome.Api($"{detail} client/grant rejected"),
+            HttpStatusCode.BadRequest => LoginOutcome.Bad(detail),
             _ => LoginOutcome.Api(detail),
         };
     }
