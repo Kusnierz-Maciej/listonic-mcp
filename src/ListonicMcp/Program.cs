@@ -6,6 +6,9 @@ using ListonicMcp.Security.OAuth;
 using ListonicMcp.Tools;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Options;
+using OpenTelemetry.Logs;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 
 if (args.Contains("--stdio"))
 {
@@ -14,6 +17,55 @@ if (args.Contains("--stdio"))
 }
 
 var builder = WebApplication.CreateBuilder(args);
+
+var resource = ResourceBuilder.CreateDefault()
+    .AddService("listonic-mcp",
+        serviceVersion: typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "unknown");
+
+// Telemetry is decided at build time (it changes what gets registered), so read it eagerly here;
+// the same section is also registered as validated options below, so a bad endpoint fails at start.
+var telemetrySection = builder.Configuration.GetSection("Telemetry");
+var telemetry = telemetrySection.Get<TelemetryOptions>() ?? new TelemetryOptions();
+builder.Services.AddOptions<TelemetryOptions>().Bind(telemetrySection).ValidateOnStart();
+builder.Services.AddSingleton<IValidateOptions<TelemetryOptions>, TelemetryOptionsValidator>();
+
+if (telemetry.Enabled)
+{
+    // Only applied when valid — an invalid endpoint is reported by TelemetryOptionsValidator instead.
+    TelemetryOptionsValidator.IsValidEndpoint(telemetry.OtlpEndpoint, out var otlpEndpoint);
+
+    builder.Services.AddOpenTelemetry()
+        .WithTracing(tracing => tracing
+            .SetResourceBuilder(resource)
+            .AddAspNetCoreInstrumentation(o =>
+            {
+                // Attach unhandled exceptions (type, message, stack trace) to the request span.
+                o.RecordException = true;
+                o.Filter = ctx => !TelemetryNoise.IsNoise(ctx.Request.Path);
+            })
+            // MCP SDK spans: one per JSON-RPC request, e.g. "tools/call get_items" (tag gen_ai.tool.name).
+            .AddSource("Experimental.ModelContextProtocol")
+            // .NET built-in HttpClient spans: outbound Listonic API calls (query strings stay redacted).
+            .AddSource("System.Net.Http")
+            // App spans: listonic.login; business tags on tool spans.
+            .AddSource(ListonicTelemetry.SourceName)
+            .AddOtlpExporter(o =>
+            {
+                if (otlpEndpoint is not null) o.Endpoint = otlpEndpoint;
+            }))
+        .WithLogging(logging => logging
+            .SetResourceBuilder(resource)
+            .AddOtlpExporter(o =>
+            {
+                if (otlpEndpoint is not null) o.Endpoint = otlpEndpoint;
+            }));
+
+    builder.Logging.AddOpenTelemetry(o =>
+    {
+        o.IncludeScopes = true;
+        o.IncludeFormattedMessage = true;
+    });
+}
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddTransient<IListonicCredentialProvider, HttpContextCredentialProvider>();
@@ -64,12 +116,18 @@ app.UseForwardedHeaders(forwardedHeaders);
 // connector's icon from the server origin. Public — served before the /mcp gate.
 app.UseStaticFiles();
 
+app.UseMiddleware<RequestLoggingMiddleware>();
+
 // OAuth authorization-server + protected-resource endpoints (public — no /mcp gate).
 app.MapOAuthEndpoints();
 
 app.UseWhen(
     ctx => ctx.Request.Path.StartsWithSegments("/mcp"),
-    branch => branch.UseMiddleware<ApiKeyMiddleware>());
+    branch =>
+    {
+        branch.UseMiddleware<ApiKeyMiddleware>();
+        branch.UseMiddleware<UserScopeMiddleware>();
+    });
 
 app.MapMcp("/mcp");
 

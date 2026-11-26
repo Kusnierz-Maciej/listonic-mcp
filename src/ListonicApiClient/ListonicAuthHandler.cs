@@ -35,6 +35,8 @@ public class ListonicAuthHandler : DelegatingHandler
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
             _logger?.LogWarning("Listonic returned HTTP 401; invalidating the cached token and re-logging in once.");
+            // Explains the duplicate HTTP span that follows (same request re-sent with a fresh token).
+            ListonicTelemetry.Event("listonic.token_rejected_retrying", ("url.path", request.RequestUri?.AbsolutePath));
             _tokens.Invalidate(credentials, token);
 
             token = await _tokens.GetOrLoginAsync(credentials, ct => LoginAsync(credentials, ct), cancellationToken);
@@ -51,6 +53,7 @@ public class ListonicAuthHandler : DelegatingHandler
                 _logger?.LogError("Listonic still returned HTTP 401 after a fresh login — credentials rejected.");
                 _tokens.Invalidate(credentials, token);
                 response.Dispose();
+                ListonicTelemetry.Fail("credentials_rejected", "HTTP 401 after re-login");
                 throw new ListonicCredentialsRejectedException("HTTP 401 after re-login");
             }
         }
@@ -60,8 +63,14 @@ public class ListonicAuthHandler : DelegatingHandler
 
     private async Task<string> LoginAsync(ListonicClientOptions credentials, CancellationToken cancellationToken)
     {
+        // Only runs on a token-cache miss, so the span marks when (and how often) we really log in.
+        using var activity = ListonicTelemetry.Source.StartActivity("listonic.login");
+        activity?.SetTag(ListonicTelemetry.Tags.UserEmail, credentials.Email);
         var outcome = await ListonicLogin.TryLoginAsync(
             _httpClientFactory, credentials.Email, credentials.Password, _logger, cancellationToken);
+        activity?.SetTag(ListonicTelemetry.Tags.Outcome, outcome.Kind.ToString());
+        if (outcome.Kind != LoginOutcomeKind.Ok)
+            activity?.SetStatus(System.Diagnostics.ActivityStatusCode.Error, outcome.Kind.ToString());
 
         return outcome.Kind switch
         {

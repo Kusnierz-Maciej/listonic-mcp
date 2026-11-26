@@ -7,8 +7,15 @@ using ModelContextProtocol.Server;
 namespace ListonicMcp.Tools;
 
 [McpServerToolType]
-public sealed class ListonicTools(IListonicApi api)
+public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logger)
 {
+    /// <summary>Tags the current tools/call span with the target list.</summary>
+    private static void TagList(string listId, string listName)
+    {
+        ListonicTelemetry.Tag(ListonicTelemetry.Tags.ListId, listId);
+        ListonicTelemetry.Tag(ListonicTelemetry.Tags.ListName, listName);
+    }
+
     public record AddItemInput(
         [property: Description("Product name in the user's language, e.g. \"mleko\". No quantity inside the name.")] string Name,
         [property: Description("Quantity as a number, e.g. 2, 0.5, 500. Leave null if no quantity.")] decimal? Amount = null,
@@ -37,6 +44,10 @@ public sealed class ListonicTools(IListonicApi api)
             IncludeItems = false,
         }, ct);
 
+        ListonicTelemetry.Tag(ListonicTelemetry.Tags.ListsCount, lists.Count);
+        ListonicTelemetry.Outcome("ok");
+        logger.LogInformation("get_lists: {Count} list(s)", lists.Count);
+
         if (lists.Count == 0)
             return "No lists found.";
 
@@ -59,7 +70,12 @@ public sealed class ListonicTools(IListonicApi api)
         [Description("The list's name exactly as get_lists shows it. Shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,
         CancellationToken ct = default)
     {
+        TagList(listId, listName);
         var items = await api.GetItemsAsync(listId, ct);
+        ListonicTelemetry.Tag(ListonicTelemetry.Tags.ItemsCount, items.Count);
+        ListonicTelemetry.Outcome("ok");
+        logger.LogInformation("get_items [{ListId}] {ListName}: {Count} item(s), {Unchecked} unchecked",
+            listId, listName, items.Count, items.Count(i => !i.Checked));
 
         if (items.Count == 0)
             return "List is empty.";
@@ -79,6 +95,8 @@ public sealed class ListonicTools(IListonicApi api)
         [Description("Items to add")] List<AddItemInput> items,
         CancellationToken ct = default)
     {
+        TagList(listId, listName);
+        ListonicTelemetry.Tag(ListonicTelemetry.Tags.ItemsCount, items.Count);
         var addedIds = new List<string>();
         foreach (var item in items)
         {
@@ -90,6 +108,9 @@ public sealed class ListonicTools(IListonicApi api)
             }, ct);
             addedIds.Add(result.Id);
         }
+
+        ListonicTelemetry.Outcome("added");
+        logger.LogInformation("add_items [{ListId}] {ListName}: added {Count} item(s)", listId, listName, addedIds.Count);
 
         if (addedIds.Count == 0)
             return "No items added.";
@@ -114,6 +135,8 @@ public sealed class ListonicTools(IListonicApi api)
         [Description("Items to edit")] List<EditItemInput> items,
         CancellationToken ct = default)
     {
+        TagList(listId, listName);
+        ListonicTelemetry.Tag(ListonicTelemetry.Tags.ItemsCount, items.Count);
         var editedIds = new List<string>();
         foreach (var item in items)
         {
@@ -126,6 +149,9 @@ public sealed class ListonicTools(IListonicApi api)
             }, ct);
             editedIds.Add(item.ItemId);
         }
+
+        ListonicTelemetry.Outcome("edited");
+        logger.LogInformation("edit_items [{ListId}] {ListName}: edited {Count} item(s)", listId, listName, editedIds.Count);
 
         if (editedIds.Count == 0)
             return "No items edited.";
@@ -149,6 +175,8 @@ public sealed class ListonicTools(IListonicApi api)
         [Description("Items to delete (from get_items)")] List<DeleteItemInput> items,
         CancellationToken ct = default)
     {
+        TagList(listId, listName);
+        ListonicTelemetry.Tag(ListonicTelemetry.Tags.ItemsCount, items.Count);
         var allItems = await api.GetItemsAsync(listId, ct);
         var itemById = allItems.ToDictionary(i => i.Id);
 
@@ -160,6 +188,8 @@ public sealed class ListonicTools(IListonicApi api)
                 ? FormatItem(si)
                 : $"[ ] [{item.ItemId}] {item.ConfirmName}");
         }
+        ListonicTelemetry.Outcome("deleted");
+        logger.LogInformation("delete_items [{ListId}] {ListName}: deleted {Count} item(s)", listId, listName, deleted.Count);
         return deleted.Count > 0 ? string.Join("\n", deleted) : "No items deleted.";
     }
 
@@ -171,7 +201,10 @@ public sealed class ListonicTools(IListonicApi api)
         [Description("New name for the list")] string name,
         CancellationToken ct = default)
     {
+        TagList(listId, listName);
         await api.RenameListAsync(listId, new RenameListRequest { Id = listId, Name = name }, ct);
+        ListonicTelemetry.Outcome("renamed");
+        logger.LogInformation("rename_list [{ListId}] {ListName} -> {NewName}", listId, listName, name);
         return $"List {listId} renamed to \"{name}\".";
     }
 
@@ -182,7 +215,10 @@ public sealed class ListonicTools(IListonicApi api)
         [Description("The list's name exactly as get_lists shows it. Shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,
         CancellationToken ct = default)
     {
+        TagList(listId, listName);
         await api.DeleteListAsync(listId, ct);
+        ListonicTelemetry.Outcome("deleted");
+        logger.LogInformation("delete_list [{ListId}] {ListName} moved to trash", listId, listName);
         return $"List {listId} moved to trash.";
     }
 

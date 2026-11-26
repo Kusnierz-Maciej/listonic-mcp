@@ -8,7 +8,7 @@ namespace ListonicMcp.Tests;
 public class ToolOutputTests
 {
     private readonly IListonicApi _api = Substitute.For<IListonicApi>();
-    private ListonicTools Tools => new(_api);
+    private ListonicTools Tools => new(_api, Microsoft.Extensions.Logging.Abstractions.NullLogger<ListonicTools>.Instance);
 
     [Test]
     public async Task GetLists_FormatsPrivateSharedAndUncheckedCount()
