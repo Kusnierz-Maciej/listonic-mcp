@@ -2,62 +2,42 @@ using System.Text;
 
 namespace ListonicMcp.Security;
 
-public class ApiKeyMiddleware
+/// <summary>
+/// Gates <c>/mcp</c> with <c>X-Api-Key</c> (an allowlisted MCP server key) plus
+/// <c>Authorization: Basic base64(email:password)</c> carrying the caller's own Listonic credentials,
+/// which are stashed in <see cref="HttpContext.Items"/> for the credential provider. There is no
+/// server-side default account.
+/// </summary>
+public class ApiKeyMiddleware(RequestDelegate next)
 {
     public const string EmailItemKey    = "listonic-email";
     public const string PasswordItemKey = "listonic-password";
 
-    private readonly RequestDelegate _next;
-    private readonly string? _apiKey;
-    private readonly string? _fallbackEmail;
-    private readonly string? _fallbackPassword;
-
-    public ApiKeyMiddleware(RequestDelegate next, IConfiguration configuration)
+    public async Task InvokeAsync(HttpContext context, ApiKeyAllowlist allowlist, ILogger<ApiKeyMiddleware> logger)
     {
-        _next = next;
-        _apiKey           = NullIfEmpty(configuration["Security:ApiKey"]);
-        _fallbackEmail    = NullIfEmpty(configuration["Listonic:Email"]);
-        _fallbackPassword = NullIfEmpty(configuration["Listonic:Password"]);
-    }
-
-    private static string? NullIfEmpty(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value;
-
-    public async Task InvokeAsync(HttpContext context)
-    {
-        if (!string.IsNullOrWhiteSpace(_apiKey))
+        var provided = context.Request.Headers["X-Api-Key"].FirstOrDefault();
+        if (!allowlist.IsAllowed(provided))
         {
-            var provided = context.Request.Headers["X-Api-Key"].FirstOrDefault();
-
-            if (provided != _apiKey)
-            {
-                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                await context.Response.WriteAsync("Unauthorized");
-                return;
-            }
+            logger.LogWarning("Rejected /mcp request: missing or incorrect X-Api-Key.");
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            await context.Response.WriteAsync("Unauthorized");
+            return;
         }
 
         var (email, password) = ParseBasicAuth(context.Request.Headers.Authorization.FirstOrDefault());
-
-        if (string.IsNullOrWhiteSpace(email) && string.IsNullOrWhiteSpace(password))
-        {
-            email    = _fallbackEmail;
-            password = _fallbackPassword;
-        }
-
         if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
         {
-            context.Response.StatusCode = StatusCodes.Status400BadRequest;
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
             await context.Response.WriteAsync(
-                "Listonic credentials are required. Provide an Authorization: Basic header, " +
-                "or configure Listonic:Email and Listonic:Password on the server.");
+                "Listonic credentials are required. Send an Authorization: Basic header with your " +
+                "Listonic email and password.");
             return;
         }
 
         context.Items[EmailItemKey]    = email;
         context.Items[PasswordItemKey] = password;
 
-        await _next(context);
+        await next(context);
     }
 
     private static (string? email, string? password) ParseBasicAuth(string? header)
@@ -72,7 +52,7 @@ public class ApiKeyMiddleware
             if (sep < 0) return (null, null);
             return (decoded[..sep], decoded[(sep + 1)..]);
         }
-        catch
+        catch (FormatException)
         {
             return (null, null);
         }

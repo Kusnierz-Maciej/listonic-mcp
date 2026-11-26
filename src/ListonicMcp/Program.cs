@@ -3,6 +3,7 @@ using ListonicMcp;
 using ListonicMcp.Listonic;
 using ListonicMcp.Security;
 using ListonicMcp.Tools;
+using Microsoft.Extensions.Options;
 
 if (args.Contains("--stdio"))
 {
@@ -15,6 +16,13 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddTransient<IListonicCredentialProvider, HttpContextCredentialProvider>();
 builder.Services.AddListonicApiClient();
+
+// MCP server API-key allowlist (Security__AllowedApiKeys__N). Validated at startup (HTTP host only).
+builder.Services.AddOptions<SecurityOptions>()
+    .Bind(builder.Configuration.GetSection(SecurityOptions.Section))
+    .ValidateOnStart();
+builder.Services.AddSingleton<IValidateOptions<SecurityOptions>, SecurityOptionsValidator>();
+builder.Services.AddSingleton<ApiKeyAllowlist>();
 
 builder.Services
     .AddMcpServer(options =>
