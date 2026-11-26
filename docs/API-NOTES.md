@@ -48,7 +48,8 @@ Encodings are handled by `ZeroOneBoolConverter` and `DecimalStringConverter`.
   care, `kombucha` → Beverages). Unrecognised names (typos like `mlekko`, nonsense) get `1` = **Other**; nothing
   is ever left empty. Every assigned id was in `/categoriesv2`, and re-reading returns the same ids. A future
   categories tool should read `/categoriesv2` at runtime (not hard-code ids), so categories Listonic adds later
-  show up automatically. Nothing relies on this yet — add contract tests when a feature does.
+  show up automatically. This is **trusted, not contract-tested**: a categories feature can rely on the server
+  assigning a category to every item.
 - `GET /account/userinfo` — basic account info.
 - Errors use RFC 7807 problem details, e.g. `404 {"title":"The specified resource was not found.",
   "detail":"Entity \"ShoppingList\" (999999999) was not found.", …}`. The tool layer maps `404` → "not found",
