@@ -37,7 +37,8 @@ Every list the account can access (own and shared).
 [x] [9003] chleb
 ```
 
-`List is empty.` when there are no items.
+`List is empty.` when there are no items. A wrong `listId` gives a "couldn't find that list" error rather
+than an empty list (Listonic itself answers `200 []` for unknown ids, so the tool re-checks the list).
 
 ## `add_items`
 
@@ -66,7 +67,14 @@ items in `get_items` format.
 | `listId`, `listName` | target list |
 | `items[]` | `{ itemId, confirmName }` |
 
-Permanent. **Output**: the deleted items in `get_items` format.
+Permanent. **Output**: the deleted items in `get_items` format. Ids that aren't on the list are not sent to
+Listonic (it would report them as deleted) and are listed separately:
+
+```
+[ ] [9001] mleko
+Not on this list (nothing deleted; call get_items for current ids):
+[9999] chleb
+```
 
 ## `create_list`
 
@@ -85,6 +93,7 @@ to check `get_lists` first and not create a duplicate.
 | `name` | the new name |
 
 **Output**: `List 123456 renamed to "Zakupy na weekend".` On a shared list everyone sees the new name.
+A wrong `listId` gives a "couldn't find that list" error (Listonic itself accepts renames of unknown ids).
 
 ## `delete_list` — D
 
@@ -92,7 +101,8 @@ to check `get_lists` first and not create a duplicate.
 |---|---|
 | `listId`, `listName` | target list |
 
-Moves the list to the Listonic trash (restorable in the app). On a shared list it disappears for everyone.
+Moves the list to the Listonic trash (restorable in the app; through the API it is gone). On a shared list
+it disappears for everyone. A wrong `listId` gives a "couldn't find that list" error.
 **Output**: `List 123456 moved to trash.` The model is told to confirm with the user first.
 
 ## Not supported

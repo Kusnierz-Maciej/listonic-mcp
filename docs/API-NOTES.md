@@ -55,7 +55,8 @@ Encodings are handled by `ZeroOneBoolConverter` and `DecimalStringConverter`.
 ## Contracts guarded by live tests
 
 Each behaviour the code depends on has a `[Category("LiveApi")]` test (run nightly against the latest
-release by *Verify Listonic API contract compatibility*). Live test classes are `[NotInParallel]` on one key.
+release by *Verify Listonic API contract compatibility*). Live test classes are `[NotInParallel]` on one key,
+and each sweeps all `[test] ` lists before and after it runs (crash recovery).
 
 | Contract | Code that relies on it | Test |
 |---|---|---|

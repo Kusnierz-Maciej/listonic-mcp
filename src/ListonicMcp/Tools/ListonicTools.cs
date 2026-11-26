@@ -177,7 +177,7 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
         "Permanently delete items from a list; this can't be undone. To mark something as bought, tick it off with edit_items instead. " +
         "Use this when the user wants an item gone (added by mistake, no longer needed) or asks to clear bought items - then delete only the checked ones. " +
         "Before deleting more than a few items or emptying a whole list, confirm with the user. " +
-        "Get itemIds from get_items. Always pass confirmName alongside each itemId. Returns the deleted items in get_items format.")]
+        "Get itemIds from get_items. Always pass confirmName alongside each itemId. Returns the deleted items in get_items format; ids that aren't on the list are listed separately and nothing is deleted for them.")]
     public Task<string> DeleteItemsAsync(
         [Description("The list ID (from get_lists)")] string listId,
         [Description("The list's name exactly as get_lists shows it. Shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,

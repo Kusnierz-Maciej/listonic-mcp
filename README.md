@@ -34,14 +34,15 @@ underlying API: [`docs/API-NOTES.md`](docs/API-NOTES.md).
 - **OAuth** — the client discovers the endpoints and opens a sign-in page where the user enters an
   **MCP API key** (from `Security__AllowedApiKeys`) and their **Listonic email + password**. The
   credentials are checked against Listonic, then kept only inside an encrypted token held by the client —
-  never stored on the server. Sessions refresh silently; removing a key and restarting ends every session
-  created with it.
+  never stored on the server. Sessions refresh silently (access tokens last an hour, refresh tokens a
+  year); removing a key and restarting ends every session created with it.
 - **Headers** — `X-Api-Key: <key>` plus `Authorization: Basic base64(email:password)`, for clients that
   support custom headers.
 - There is **no server-side default account** in HTTP mode.
 - **No API key at all:** set `Security__RequireMcpApiKey=false` for a trusted private deployment —
   Listonic email + password are still required.
-- Listonic accounts created with Google/Facebook sign-in have no Listonic password and can't sign in here.
+- Sign-in uses a Listonic **email + password**. An account that only signs in with Google/Facebook has no
+  Listonic password, so it most likely can't be used here (not tested).
 - Every setting is validated at startup; on bad configuration the server exits with code 1 and lists
   each problem.
 
@@ -54,7 +55,7 @@ The image is published to GHCR on every release for `linux/amd64` and `linux/arm
    - [`docker-compose.synology.yml`](src/ListonicMcp/docker/docker-compose.synology.yml) — the same, with
      readable single-line logs for Synology Container Manager (Project → Create → pick the folder).
 
-   Each lists every setting, commented out with its default — uncomment to change.
+   Each lists every non-secret setting with its default value (mostly commented out) — edit or uncomment to change.
 2. Copy [`.env.example`](src/ListonicMcp/docker/.env.example) next to it as `.env` and set the
    secrets: at least one `Security__AllowedApiKeys__N` and a long, random, **stable**
    `Security__TokenSecret` (`openssl rand -base64 48`; changing it signs everyone out). Escape `$` as `$$`.
@@ -62,8 +63,8 @@ The image is published to GHCR on every release for `linux/amd64` and `linux/arm
 
 The server must be reachable over **HTTPS** for remote clients — e.g. through
 [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/),
-ngrok, or a reverse proxy. The proxy must forward `X-Forwarded-Proto` / `X-Forwarded-Host` (they all do
-by default); if the OAuth metadata at `/.well-known/oauth-authorization-server` shows `http://` URLs,
+ngrok, or a reverse proxy. The proxy must forward `X-Forwarded-Proto` / `X-Forwarded-Host` (most do by
+default); if the OAuth metadata at `/.well-known/oauth-authorization-server` shows `http://` URLs,
 claude.ai's sign-in will fail.
 
 ## Connecting a client
@@ -132,8 +133,11 @@ dotnet user-secrets --project src/ListonicMcp set "Security:TokenSecret" "dev-to
 dotnet run --project src/ListonicMcp      # http://localhost:5100/mcp
 ```
 
-Point the [MCP Inspector](https://github.com/modelcontextprotocol/inspector) or Claude Code at
-`http://localhost:5100/mcp` and sign in with `dev-key` + your Listonic account, or send the headers.
+Test it with the official [MCP Inspector](https://github.com/modelcontextprotocol/inspector)
+(`npx @modelcontextprotocol/inspector`, needs Node): transport **Streamable HTTP**, URL
+`http://localhost:5100/mcp`, **Connect** — the sign-in page opens; use `dev-key` + your Listonic account.
+Claude Code works the same way, or send the headers. For stdio:
+`npx @modelcontextprotocol/inspector -e Listonic__Email=… -e Listonic__Password=… dotnet run --project src/ListonicMcp -- --stdio`.
 
 To see exactly what goes over the wire, use the diagnostic sandbox — see `CLAUDE.md`
 (`dotnet run --project src/Listonic.Sandbox`).
@@ -144,11 +148,21 @@ To see exactly what goes over the wire, use the diagnostic sandbox — see `CLAU
 # Unit + offline tests — no account, no network (what CI runs)
 dotnet test --solution src/ListonicMcp.slnx --treenode-filter '/**[Category!=LiveApi]'
 
-# Live API tests — real account; create "[test] " lists and delete them afterwards
+# Live API tests — real account (see "Live tests" below)
 dotnet user-secrets --project src/ListonicApiClient.Tests set "Listonic:Email" "your@email.com"
 dotnet user-secrets --project src/ListonicApiClient.Tests set "Listonic:Password" "yourpassword"
 dotnet test --project src/ListonicApiClient.Tests --treenode-filter '/**[Category=LiveApi]'
 ```
 
-Credentials can also come from `Listonic__Email` / `Listonic__Password` environment variables. The live
-tests run nightly in CI against the latest release to catch Listonic API changes.
+Credentials can also come from `Listonic__Email` / `Listonic__Password` environment variables.
+
+**Live tests** are the contract check for the unofficial Listonic API: every API behaviour the server
+relies on has one (mapped to the code in the table in [`docs/API-NOTES.md`](docs/API-NOTES.md#contracts-guarded-by-live-tests)).
+They run nightly in CI against the latest release, and an issue is opened when they fail. They:
+
+- run **one at a time** (never in parallel) — one real account, one rate limit;
+- write only to lists they create, named `[test] …`, and delete them;
+- delete every `[test] ` list **before and after** each test class, so a crashed or cancelled run is
+  cleaned up by the next one.
+
+Pull requests run only the unit + offline tests.
