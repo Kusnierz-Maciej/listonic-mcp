@@ -18,7 +18,6 @@ public static class StdioHost
 
         builder.Services.AddTransient<IListonicCredentialProvider, ConfigurationCredentialProvider>();
         builder.Services.AddListonicApiClient();
-        builder.Services.AddScoped<ListonicApiAccessor>();
 
         builder.Services
             .AddMcpServer(options => options.ServerInstructions = McpInstructions.Text)

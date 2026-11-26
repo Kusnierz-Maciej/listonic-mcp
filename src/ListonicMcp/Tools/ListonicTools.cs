@@ -1,13 +1,13 @@
 using System.ComponentModel;
 using ListonicApiClient.Models.Items;
 using ListonicApiClient.Models.Lists;
-using ListonicMcp.Listonic;
+using ListonicApiClient;
 using ModelContextProtocol.Server;
 
 namespace ListonicMcp.Tools;
 
 [McpServerToolType]
-public sealed class ListonicTools(ListonicApiAccessor accessor)
+public sealed class ListonicTools(IListonicApi api)
 {
     public record AddItemInput(
         [property: Description("Product name in the user's language, e.g. \"mleko\". No quantity inside the name.")] string Name,
@@ -30,7 +30,6 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
     [Description("List every shopping list the user can access (own and shared). Returns one line per list as \"[listId] name (private|shared) - N unchecked\". Call this first - every other tool needs a listId from here. Match the user's wording to a list name; if more than one list could fit, ask which one. This server has no categories or item notes and can't create lists or move items between lists - say so instead of looking for another tool.")]
     public async Task<string> GetListsAsync(CancellationToken ct = default)
     {
-        var api = accessor.Api;
         var lists = await api.GetListsAsync(new GetListsRequest
         {
             IncludeShares = true,
@@ -60,7 +59,7 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
         [Description("The list's name exactly as get_lists shows it. Shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,
         CancellationToken ct = default)
     {
-        var items = await accessor.Api.GetItemsAsync(listId, ct);
+        var items = await api.GetItemsAsync(listId, ct);
 
         if (items.Count == 0)
             return "List is empty.";
@@ -80,7 +79,6 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
         [Description("Items to add")] List<AddItemInput> items,
         CancellationToken ct = default)
     {
-        var api = accessor.Api;
         var addedIds = new List<string>();
         foreach (var item in items)
         {
@@ -116,7 +114,6 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
         [Description("Items to edit")] List<EditItemInput> items,
         CancellationToken ct = default)
     {
-        var api = accessor.Api;
         var editedIds = new List<string>();
         foreach (var item in items)
         {
@@ -152,7 +149,6 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
         [Description("Items to delete (from get_items)")] List<DeleteItemInput> items,
         CancellationToken ct = default)
     {
-        var api = accessor.Api;
         var allItems = await api.GetItemsAsync(listId, ct);
         var itemById = allItems.ToDictionary(i => i.Id);
 
@@ -175,7 +171,7 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
         [Description("New name for the list")] string name,
         CancellationToken ct = default)
     {
-        await accessor.Api.RenameListAsync(listId, new RenameListRequest { Id = listId, Name = name }, ct);
+        await api.RenameListAsync(listId, new RenameListRequest { Id = listId, Name = name }, ct);
         return $"List {listId} renamed to \"{name}\".";
     }
 
@@ -186,7 +182,7 @@ public sealed class ListonicTools(ListonicApiAccessor accessor)
         [Description("The list's name exactly as get_lists shows it. Shown in the permission prompt so the user can confirm the right list; not sent to the API.")] string listName,
         CancellationToken ct = default)
     {
-        await accessor.Api.DeleteListAsync(listId, ct);
+        await api.DeleteListAsync(listId, ct);
         return $"List {listId} moved to trash.";
     }
 

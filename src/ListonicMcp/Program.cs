@@ -15,7 +15,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddTransient<IListonicCredentialProvider, HttpContextCredentialProvider>();
 builder.Services.AddListonicApiClient();
-builder.Services.AddScoped<ListonicApiAccessor>();
 
 builder.Services
     .AddMcpServer(options => options.ServerInstructions = McpInstructions.Text)
