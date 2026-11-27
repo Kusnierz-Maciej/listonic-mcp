@@ -1,5 +1,17 @@
 # listonic-mcp
 
+## Framework guidelines
+
+This server follows the shared guidelines for our unofficial-API MCP servers in **unofficial-mcp-framework**
+(`~/GitPersonal/unofficial-mcp-framework`, https://github.com/Kusnierz-Maciej/unofficial-mcp-framework); listonic-mcp
+is the reference implementation. Start from its `README.md` index and open only the topic you need.
+
+- Before changing a cross-cutting pattern (auth/OAuth, tool registration and errors, rate limiting, sandbox, live
+  contract tests, telemetry, configuration, CI/release), read the matching guideline.
+- When listonic gets a new or better pattern, update the guidelines too: the guideline file, `status/alignment.md`,
+  and a new dated, tagged version in its `CHANGELOG.md` with an "Act on:" line per server — that's how the other
+  servers see what's new.
+
 ## Git
 
 - Pull from remote using fast-forward only (`pull.ff = only`); never create merge commits when syncing main.
