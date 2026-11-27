@@ -10,7 +10,7 @@
         <AssemblyName>Listonic.Sandbox</AssemblyName>
         <!-- Reuse the live tests' user-secrets store so Listonic:Email / Listonic:Password
              are the same creds ListonicApiClient.Tests already uses. -->
-        <UserSecretsId>listonic-api-client-tests</UserSecretsId>
+        <UserSecretsId>listonic-api-tests</UserSecretsId>
     </PropertyGroup>
 
     <ItemGroup>
