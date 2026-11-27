@@ -53,7 +53,7 @@ Each trace is built from four span sources:
 
 | Source | Spans |
 |---|---|
-| ASP.NET Core instrumentation | incoming request (root), e.g. `POST /mcp` — tagged `user.email`; unhandled exceptions recorded. Static icons and `/.well-known/*` are not traced. |
+| ASP.NET Core instrumentation | incoming request (root) — tagged `user.email`; unhandled exceptions recorded. Static icons and `/.well-known/*` are not traced. `/mcp` requests are named after their MCP message, e.g. `POST /mcp [tools/call get_items]`, `POST /mcp [tools/list]`, `POST /mcp [notifications/initialized]` — from the `Mcp-Method` / `Mcp-Name` headers when the client sends them (2026-07-28 Streamable HTTP), else from the parsed JSON-RPC message (`McpSpanNames`; an OTel processor re-applies the name after the instrumentation resets it to `{method} {route}`). The SSE `GET` and session `DELETE` keep `GET /mcp/` / `DELETE /mcp/`. |
 | `Experimental.ModelContextProtocol` (MCP SDK) | one per JSON-RPC request, e.g. `tools/call get_items` — tagged `gen_ai.tool.name`, `mcp.method.name`, `mcp.session.id` |
 | `System.Net.Http` (.NET built-in) | each outbound Listonic API call (query strings redacted, the .NET default) |
 | `Listonic` (app) | `listonic.login` — only on a token-cache miss, so it shows when (and how often) the server really logs in. **Phase spans** inside tools, so the backend calls of each step group together: `listonic.items.add`, `listonic.items.update`, `listonic.items.lookup`, `listonic.items.delete`, `listonic.items.reread`, `listonic.verify_list_exists` |
