@@ -168,6 +168,91 @@ public class OAuthFlowTests
         await Assert.That(await CallGetListsAsync(http, newAccess)).Contains("Zakupy");
     }
 
+    private const string WrongPassword = "wrong <&\" pass";
+
+    /// <summary>The page script's background submit: same form fields, Accept: application/json.</summary>
+    private static Task<HttpResponseMessage> PostFormAsJson(HttpClient http, Dictionary<string, string> form)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, "/authorize") { Content = new FormUrlEncodedContent(form) };
+        request.Headers.Accept.ParseAdd("application/json");
+        return http.SendAsync(request);
+    }
+
+    private static Dictionary<string, string> SignInForm(string challenge, string password) => new()
+    {
+        ["client_id"] = "mcp-test", ["redirect_uri"] = Redirect, ["state"] = "xyz", ["code_challenge"] = challenge,
+        ["api_key"] = "key-a", ["listonic_email"] = Email, ["listonic_password"] = password,
+    };
+
+    [Test]
+    public async Task BackgroundSignIn_Failure_IsJsonError_AndEchoesNothing()
+    {
+        await using var server = Server();
+        var (_, challenge) = NewPkce();
+
+        var wrong = await PostFormAsJson(Client(server), SignInForm(challenge, WrongPassword));
+        var body = await wrong.Content.ReadAsStringAsync();
+
+        await Assert.That(wrong.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
+        await Assert.That(wrong.Content.Headers.ContentType!.MediaType).IsEqualTo("application/json");
+        var json = JsonDocument.Parse(body).RootElement;
+        await Assert.That(json.GetProperty("error").GetString()!).Contains("Listonic rejected these credentials");
+        await Assert.That(json.GetProperty("field").GetString()).IsEqualTo("credentials");
+        await Assert.That(body).DoesNotContain("wrong");
+        await Assert.That(body).DoesNotContain("key-a");
+        await Assert.That(body).DoesNotContain(Email);
+    }
+
+    [Test]
+    public async Task BackgroundSignIn_WrongApiKey_PointsAtTheApiKeyField()
+    {
+        await using var server = Server();
+        var (_, challenge) = NewPkce();
+        var form = SignInForm(challenge, Password);
+        form["api_key"] = "not-a-key";
+
+        var response = await PostFormAsJson(Client(server), form);
+        var json = await Json(response);
+
+        await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
+        await Assert.That(json.GetProperty("field").GetString()).IsEqualTo("api_key");
+        await Assert.That(json.GetProperty("error").GetString()!).Contains("API key");
+    }
+
+    [Test]
+    public async Task BackgroundSignIn_Success_ReturnsRedirectUrl_WithWorkingCode()
+    {
+        await using var server = Server();
+        var http = Client(server);
+        var (verifier, challenge) = NewPkce();
+
+        var ok = await PostFormAsJson(http, SignInForm(challenge, Password));
+        await Assert.That(ok.StatusCode).IsEqualTo(HttpStatusCode.OK);   // not a 302: fetch would follow it itself
+        var redirect = (await Json(ok)).GetProperty("redirect").GetString()!;
+
+        await Assert.That(redirect).StartsWith(Redirect + "?code=");
+        await Assert.That(redirect).EndsWith("&state=xyz");
+        var code = Uri.UnescapeDataString(Regex.Match(redirect, "code=([^&]+)").Groups[1].Value);
+        await Assert.That((await ExchangeAsync(http, code, verifier)).StatusCode).IsEqualTo(HttpStatusCode.OK);
+    }
+
+    [Test]
+    public async Task NoScriptSignIn_Failure_ReRendersForm_KeepingOnlyTheEmail_NotCached()
+    {
+        await using var server = Server();
+        var (_, challenge) = NewPkce();
+
+        var wrong = await PostForm(Client(server), "/authorize", SignInForm(challenge, WrongPassword));
+        var html = await wrong.Content.ReadAsStringAsync();
+
+        await Assert.That(wrong.StatusCode).IsEqualTo(HttpStatusCode.Unauthorized);
+        await Assert.That(html).Contains("Listonic rejected these credentials");
+        await Assert.That(html).Contains($"value=\"{Email}\"");
+        await Assert.That(html).DoesNotContain("wrong &lt;&amp;&quot; pass");
+        await Assert.That(html).DoesNotContain("value=\"key-a\"");
+        await Assert.That(wrong.Headers.CacheControl?.NoStore).IsTrue();
+    }
+
     [Test]
     public async Task RemovingTheApiKey_RevokesItsTokens()
     {
