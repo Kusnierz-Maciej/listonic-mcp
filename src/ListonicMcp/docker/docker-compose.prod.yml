@@ -19,15 +19,18 @@ services:
       # Client-side rate limit on every Listonic call (burst, then one call per period). Loosen at your own risk.
       #- RateLimit__TokenLimit=15
       #- RateLimit__ReplenishmentPeriod=00:00:00.5
-      # OAuth token lifetimes (refresh = how long a client may stay idle before signing in again).
+      # OAuth lifetimes: code = one-time code from a successful sign-in until the client swaps it for tokens
+      # (not the time to fill in the form); access = per-call token, renewed silently; refresh = how long a
+      # client may stay idle before signing in again.
       #- OAuth__AuthorizationCodeLifetime=00:01:00
       #- OAuth__AccessTokenLifetime=01:00:00
       #- OAuth__RefreshTokenLifetime=365.00:00:00
       # Logging
       #- Logging__LogLevel__Default=Information
       #- Logging__LogLevel__Microsoft.AspNetCore=Warning
-      #- Logging__LogLevel__System.Net.Http.HttpClient=Warning
-      #- Logging__LogLevel__ModelContextProtocol=Warning
+      #- Logging__LogLevel__Microsoft.AspNetCore.Hosting.Diagnostics=Information   # request start/finish + status + ms
+      #- Logging__LogLevel__System.Net.Http.HttpClient=Information               # each Listonic call: status + ms
+      #- Logging__LogLevel__ModelContextProtocol=Information                     # each MCP method + tool result
       #- Logging__Console__FormatterName=simple
       #- Logging__Console__FormatterOptions__SingleLine=true
       #- Logging__Console__FormatterOptions__IncludeScopes=true

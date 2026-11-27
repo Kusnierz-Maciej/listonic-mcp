@@ -142,10 +142,14 @@ Set in the compose file (or `.env` for secrets) using the `Section__Key` convent
 | `Security__RequireMcpApiKey` | `true` | `false` drops the API-key gate. |
 | `Prompts__Enabled` | `true` | `false` removes the MCP prompts (and list-name completions). |
 | `RateLimit__TokenLimit` / `RateLimit__ReplenishmentPeriod` | `15` / `00:00:00.5` | Client-side limit on Listonic calls: a burst, then one call per period (extra calls wait). Loosen at your own risk. |
-| `OAuth__AuthorizationCodeLifetime` / `__AccessTokenLifetime` / `__RefreshTokenLifetime` | `00:01:00` / `01:00:00` / `365.00:00:00` | Token lifetimes; the refresh lifetime is how long a client may stay idle before signing in again. |
+| `OAuth__AuthorizationCodeLifetime` / `__AccessTokenLifetime` / `__RefreshTokenLifetime` | `00:01:00` / `01:00:00` / `365.00:00:00` | Code: how long the client has to swap the one-time code it gets after a successful sign-in for tokens (done automatically within a second; the sign-in form itself has no time limit). Access: lifetime of the token sent on every call (renewed silently). Refresh: how long a client may stay idle before signing in again. |
 | `Telemetry__Enabled` | `false` | OpenTelemetry export of traces + logs — see [`docs/OPENTELEMETRY.md`](docs/OPENTELEMETRY.md). |
 | `Telemetry__OtlpEndpoint` | `http://localhost:4317` | Absolute http(s) OTLP endpoint. |
-| `Logging__…` | Information, single-line console | Standard ASP.NET Core logging settings. |
+| `Logging__LogLevel__Default` | `Information` | App logs: one line per tool call, sign-in, login. |
+| `Logging__LogLevel__Microsoft.AspNetCore` / `…Microsoft.AspNetCore.Hosting.Diagnostics` | `Warning` / `Information` | Framework noise (routing, result writing) off; one start + one finished line (status, duration) per HTTP request kept. |
+| `Logging__LogLevel__System.Net.Http.HttpClient` | `Information` | Each outbound Listonic call with status and duration (4 lines per call; query strings are shown as `?*`). Set `Warning` to quiet it. |
+| `Logging__LogLevel__ModelContextProtocol` | `Information` | Each MCP method handled (timing, client name) and every tool result (`IsError`). |
+| `Logging__Console__…` | `simple`, single-line, scopes on | Console format; the Synology compose sets it explicitly for `docker logs`. |
 | `Listonic__Email` / `Listonic__Password` | — | stdio mode only. |
 
 Calls to Listonic are rate-limited client-side (by default bursts of 15, then 2 per second; extra calls wait).

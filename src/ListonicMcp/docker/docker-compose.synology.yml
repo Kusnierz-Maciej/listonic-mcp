@@ -20,7 +20,9 @@ services:
       # Client-side rate limit on every Listonic call (burst, then one call per period). Loosen at your own risk.
       #- RateLimit__TokenLimit=15
       #- RateLimit__ReplenishmentPeriod=00:00:00.5
-      # OAuth token lifetimes (refresh = how long a client may stay idle before signing in again).
+      # OAuth lifetimes: code = one-time code from a successful sign-in until the client swaps it for tokens
+      # (not the time to fill in the form); access = per-call token, renewed silently; refresh = how long a
+      # client may stay idle before signing in again.
       #- OAuth__AuthorizationCodeLifetime=00:01:00
       #- OAuth__AccessTokenLifetime=01:00:00
       #- OAuth__RefreshTokenLifetime=365.00:00:00
@@ -28,14 +30,16 @@ services:
       # Logging — human-readable single-line console (good for `docker logs` / Container Manager on the NAS).
       - Logging__LogLevel__Default=Information
       - Logging__LogLevel__Microsoft.AspNetCore=Warning
-      - Logging__LogLevel__System.Net.Http.HttpClient=Warning
-      - Logging__LogLevel__ModelContextProtocol=Warning
+      - Logging__LogLevel__Microsoft.AspNetCore.Hosting.Diagnostics=Information   # request start/finish + status + ms
+      - Logging__LogLevel__System.Net.Http.HttpClient=Information               # each Listonic call: status + ms
+      - Logging__LogLevel__ModelContextProtocol=Information                     # each MCP method + tool result
       - Logging__Console__FormatterName=simple
       - Logging__Console__FormatterOptions__SingleLine=true
       - Logging__Console__FormatterOptions__IncludeScopes=true
 
-      # Telemetry — OTLP export to the logging stack's Alloy receiver.
-      #- Telemetry__Enabled=true
+      # Telemetry — off by default; set true to export to the logging stack's Alloy receiver
+      # (and uncomment the `networks:` blocks below).
+      #- Telemetry__Enabled=false
       #- Telemetry__OtlpEndpoint=http://alloy:4317
     # With telemetry on, join the observability stack's shared network so `alloy` resolves
     # (uncomment this and the top-level `networks:` block at the end of the file).
