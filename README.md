@@ -48,8 +48,10 @@ underlying API: [`docs/API-NOTES.md`](docs/API-NOTES.md).
 - **OAuth** — the client discovers the endpoints and opens a sign-in page where the user enters an
   **MCP API key** (from `Security__AllowedApiKeys`) and their **Listonic email + password**. The
   credentials are checked against Listonic, then kept only inside an encrypted token held by the client —
-  never stored on the server. Sessions refresh silently (by default access tokens last an hour, refresh
-  tokens a year); removing a key and restarting ends every session created with it.
+  never stored on the server. If something is wrong, the page says so under the field concerned (the API key,
+  or email + password) and keeps everything typed — nothing is cleared or sent back by the server. Sessions
+  refresh silently (by default access tokens last an hour, refresh tokens a year); removing a key and restarting
+  ends every session created with it.
 - **Headers (legacy)** — `X-Api-Key: <key>` plus `Authorization: Basic base64(email:password)`, for clients
   that support custom headers. Still supported, but prefer OAuth: with headers your Listonic password sits in
   the client's config.

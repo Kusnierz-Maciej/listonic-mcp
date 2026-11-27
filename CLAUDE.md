@@ -102,7 +102,9 @@ I --method prompts/get --prompt-name bought --prompt-args list=Zakupy
 - A tool error shows as `"isError": true` with the message in `content[0].text` and a `tool_is_error` line;
   an opaque "An error occurred invoking '<tool>'" with nothing after the colon means an exception escaped
   `ToolErrors.GuardAsync` or argument binding — check the server log.
-- stdio: `npx -y @modelcontextprotocol/inspector --cli -e Listonic__Email=… -e Listonic__Password=… dotnet run --project src/ListonicMcp -- --stdio --method tools/list`.
+- stdio — `--method` must come **before** the server command (after `-- --stdio` it is passed to the server and
+  the CLI says "Method is required"); the host's own user-secrets have no Listonic account, so pass it with `-e`:
+  `npx -y @modelcontextprotocol/inspector --cli --method tools/list -e Listonic__Email=… -e Listonic__Password=… dotnet run --project src/ListonicMcp -- --stdio 2>/dev/null`.
 - Same safety rules as the sandbox: read-only calls freely; write calls only against a `[test] ` list.
 - For the OAuth sign-in page and other UI, use the Inspector web UI (`npx @modelcontextprotocol/inspector`,
   transport Streamable HTTP) — see README.
