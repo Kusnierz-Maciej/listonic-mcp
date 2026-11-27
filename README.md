@@ -64,6 +64,13 @@ underlying API: [`docs/API-NOTES.md`](docs/API-NOTES.md).
 
 The image is published to GHCR on every release for `linux/amd64` and `linux/arm64`.
 
+[![Docker images](https://img.shields.io/badge/Docker_images-latest-blue?logo=docker)](https://github.com/Kusnierz-Maciej/listonic-mcp/pkgs/container/listonic-mcp?tag=latest)
+
+    docker pull ghcr.io/kusnierz-maciej/listonic-mcp:latest
+
+Each release is also tagged with its version (e.g. `v1.11.0`) — see the
+[releases](https://github.com/Kusnierz-Maciej/listonic-mcp/releases) page.
+
 1. Copy a compose file from [`src/ListonicMcp/docker/`](src/ListonicMcp/docker/) as `docker-compose.yml`:
    - [`docker-compose.prod.yml`](src/ListonicMcp/docker/docker-compose.prod.yml) — generic, any host.
    - [`docker-compose.synology.yml`](src/ListonicMcp/docker/docker-compose.synology.yml) — the same, with
