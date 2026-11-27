@@ -105,6 +105,21 @@ Moves the list to the Listonic trash (restorable in the app; through the API it 
 it disappears for everyone. A wrong `listId` gives a "couldn't find that list" error.
 **Output**: `List 123456 moved to trash.` The model is told to confirm with the user first.
 
+## Prompts
+
+User-invoked only (slash commands / "+" menu) — the model never runs them by itself. Each returns one user
+message with the steps and tools to use, ending with: *"These are default steps: if I have my own instructions
+or a skill for Listonic shopping lists, follow those preferences instead."* The `list` argument of every prompt
+autocompletes from the account's list names (`completion/complete`). Disable all with `Prompts__Enabled=false`.
+
+| Prompt | Arguments | Steps |
+|---|---|---|
+| `what_to_buy` | `list` | get_lists → get_items → unchecked items only, count of bought ones |
+| `quick_add` | `list`, `items` (free text) | split into name/amount/unit; checked duplicate → untick + amount, unchecked duplicate → ask, else add; one add_items + at most one edit_items |
+| `bought` | `list`, `items` (optional) | tick matching unchecked rows (all of a shared name) via one edit_items; never deletes; empty `items` = everything, after confirming |
+| `clear_bought` | `list` | count + list the checked items, confirm, then one delete_items for checked items only |
+| `share_as_text` | `list` | read-only; list name + `- name (quantity)` lines for unchecked items |
+
 ## Not supported
 
 Moving items between lists (add to one + delete from the other), categories, notes on items.

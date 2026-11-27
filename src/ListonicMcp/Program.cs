@@ -3,6 +3,7 @@ using ListonicMcp;
 using ListonicMcp.Listonic;
 using ListonicMcp.Security;
 using ListonicMcp.Security.OAuth;
+using ListonicMcp.Prompts;
 using ListonicMcp.Tools;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Options;
@@ -92,7 +93,8 @@ builder.Services
         options.ServerInstructions = McpInstructions.Text;
     })
     .WithHttpTransport()
-    .WithListonicTools();
+    .WithListonicTools()
+    .WithListonicPrompts(builder.Configuration);
 
 var app = builder.Build();
 

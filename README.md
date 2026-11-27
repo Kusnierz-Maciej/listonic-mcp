@@ -21,7 +21,21 @@ Not affiliated with or endorsed by Listonic.
 | `delete_list` | Move a list to the Listonic trash |
 
 Reads are marked read-only and deletes destructive, so clients can auto-approve the former and ask before
-the latter. Details, inputs and example outputs: [`docs/MCP-TOOLS.md`](docs/MCP-TOOLS.md). Notes on the
+the latter.
+
+**Prompts** — shortcuts you pick yourself (slash commands in Claude Code, the "+" menu in claude.ai); they
+never run on their own, and the `list` argument autocompletes from your lists:
+
+| Prompt | Does |
+|---|---|
+| `what_to_buy` | Only the items still to buy |
+| `quick_add` | Add free-text items (`2 l mleka, chleb`) without duplicates |
+| `bought` | Tick off what you bought (or everything, after confirming) |
+| `clear_bought` | Delete the ticked-off items, after confirming |
+| `share_as_text` | The list as plain text for a chat app |
+
+They are defaults: if you have your own instructions or skills for Listonic, those should win (the prompt
+text asks the model to prefer them — a hint, not enforced). Turn prompts off with `Prompts__Enabled=false`. Details, inputs and example outputs: [`docs/MCP-TOOLS.md`](docs/MCP-TOOLS.md). Notes on the
 underlying API: [`docs/API-NOTES.md`](docs/API-NOTES.md).
 
 ## Transports & authentication
@@ -118,6 +132,7 @@ Set in the compose file (or `.env` for secrets) using the `Section__Key` convent
 | `Security__AllowedApiKeys__N` | — | MCP API keys (secret). At least one while keys are required. |
 | `Security__TokenSecret` | — | Required (secret). ≥ 32 chars, stable; secures OAuth tokens. |
 | `Security__RequireMcpApiKey` | `true` | `false` drops the API-key gate. |
+| `Prompts__Enabled` | `true` | `false` removes the MCP prompts (and list-name completions). |
 | `Telemetry__Enabled` | `false` | OpenTelemetry export of traces + logs — see [`docs/OPENTELEMETRY.md`](docs/OPENTELEMETRY.md). |
 | `Telemetry__OtlpEndpoint` | `http://localhost:4317` | Absolute http(s) OTLP endpoint. |
 | `Logging__…` | Information, single-line console | Standard ASP.NET Core logging settings. |

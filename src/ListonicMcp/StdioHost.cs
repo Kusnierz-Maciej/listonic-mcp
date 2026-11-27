@@ -1,5 +1,6 @@
 using ListonicApiClient;
 using ListonicMcp.Listonic;
+using ListonicMcp.Prompts;
 using ListonicMcp.Tools;
 using Microsoft.Extensions.Options;
 
@@ -31,7 +32,8 @@ public static class StdioHost
             options.ServerInstructions = McpInstructions.Text;
         })
             .WithStdioServerTransport()
-            .WithListonicTools();
+            .WithListonicTools()
+            .WithListonicPrompts(builder.Configuration);
 
         var host = builder.Build();
         if (!StartupValidation.TryValidate(host.Services))

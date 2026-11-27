@@ -80,6 +80,8 @@ I() { npx -y @modelcontextprotocol/inspector --cli http://127.0.0.1:5199/mcp \
 I --method tools/list --strict          # schema portability: full report on stderr, exit 6 on errors
 I --method tools/call --tool-name get_lists
 I --method tools/call --tool-name get_items --tool-args-json '{"listId":"123","listName":"Zakupy"}'
+I --method prompts/list
+I --method prompts/get --prompt-name bought --prompt-args list=Zakupy
 ```
 
 - `--strict` must stay clean (empty stderr, exit 0) — `ToolSchemaTests` guards the same in unit tests.
