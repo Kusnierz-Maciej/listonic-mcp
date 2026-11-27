@@ -53,6 +53,46 @@ dump directory at the end — read the `.http` files there to analyse the issue.
 This is a real account. Keep casual probing read-only; write tests only on lists prefixed `[test] `
 that the scenario/test creates and deletes itself.
 
+## Checking the MCP server — MCP Inspector CLI
+
+Use the official MCP Inspector in CLI mode (`npx -y @modelcontextprotocol/inspector --cli …`, needs Node) to
+check the server as a client sees it: tool list, schemas, annotations, real tool calls. Run it after any
+change to tools, descriptions, parameters or auth.
+
+Start the HTTP host with dev settings (the key and secret are throwaway dev values):
+
+```sh
+Security__AllowedApiKeys__0=dev-key \
+Security__TokenSecret=dev-token-secret-at-least-32-chars-long \
+ASPNETCORE_URLS=http://127.0.0.1:5199 dotnet run --project src/ListonicMcp
+```
+
+Authenticate with the header path; build the Basic value from the live tests' user-secrets
+(`Listonic:Email` / `Listonic:Password` in `src/ListonicApiClient.Tests`) without printing it:
+
+```sh
+LB=$(dotnet user-secrets list --project src/ListonicApiClient.Tests | python3 -c 'import sys,base64
+d=dict(l.rstrip("\n").split(" = ",1) for l in sys.stdin if " = " in l)
+print(base64.b64encode((d["Listonic:Email"]+":"+d["Listonic:Password"]).encode()).decode())')
+I() { npx -y @modelcontextprotocol/inspector --cli http://127.0.0.1:5199/mcp \
+        --header "X-Api-Key: dev-key" --header "Authorization: Basic $LB" "$@"; }
+
+I --method tools/list --strict          # schema portability: full report on stderr, exit 6 on errors
+I --method tools/call --tool-name get_lists
+I --method tools/call --tool-name get_items --tool-args-json '{"listId":"123","listName":"Zakupy"}'
+```
+
+- `--strict` must stay clean (empty stderr, exit 0) — `ToolSchemaTests` guards the same in unit tests.
+- `--tool-arg k=v` sends numeric-looking values as JSON **numbers**; the server accepts them for string
+  parameters, but use `--tool-args-json` when you need exact types.
+- A tool error shows as `"isError": true` with the message in `content[0].text` and a `tool_is_error` line;
+  an opaque "An error occurred invoking '<tool>'" with nothing after the colon means an exception escaped
+  `ToolErrors.GuardAsync` or argument binding — check the server log.
+- stdio: `npx -y @modelcontextprotocol/inspector --cli -e Listonic__Email=… -e Listonic__Password=… dotnet run --project src/ListonicMcp -- --stdio --method tools/list`.
+- Same safety rules as the sandbox: read-only calls freely; write calls only against a `[test] ` list.
+- For the OAuth sign-in page and other UI, use the Inspector web UI (`npx @modelcontextprotocol/inspector`,
+  transport Streamable HTTP) — see README.
+
 ## Live API tests = the API contract
 
 The live tests (`[Category("LiveApi")]` in `src/ListonicApiClient.Tests`) are the contract check against

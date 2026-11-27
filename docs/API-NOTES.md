@@ -79,7 +79,6 @@ all `[test] ` lists are swept once when the run starts (crash recovery) and afte
 | No amount = "", clear = "0"/"", Unicode names | `FormatItem`, `edit_items` | `ItemQuantity_…` |
 | Partial PATCH keeps other fields; check/rename/amount/unit | `edit_items` | `UpdateItem_*` |
 | Delete / rename / create / get list | list tools | `DeleteList_*`, `RenameList_*`, `CreateList_*`, `GetList_*` |
-| Categories: flat array with Id + Name | planned categories feature | `Categories_AreFlatList_WithIdAndName` |
 
 ## Client-side rate limit
 

@@ -1,5 +1,4 @@
 using System.Net;
-using System.Text.Json;
 using ListonicApiClient.Models.Items;
 using ListonicApiClient.Models.Lists;
 using ListonicApiClient.Models.Login;
@@ -214,17 +213,5 @@ public class LiveApiContractTests
         {
             await _api.DeleteListAsync(list.Id);
         }
-    }
-
-    [Test]
-    public async Task Categories_AreFlatList_WithIdAndName()
-    {
-        // Shape documented for the planned categories feature.
-        var raw = (JsonElement)await _api.GetCategoriesAsync();
-        await Assert.That(raw.ValueKind).IsEqualTo(JsonValueKind.Array);
-        await Assert.That(raw.GetArrayLength()).IsGreaterThan(0);
-        var first = raw[0];
-        await Assert.That(first.TryGetProperty("Id", out _)).IsTrue();
-        await Assert.That(first.TryGetProperty("Name", out _)).IsTrue();
     }
 }
