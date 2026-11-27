@@ -296,21 +296,23 @@ public static class OAuthEndpoints
             <link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192">
             <link rel="apple-touch-icon" href="/apple-touch-icon.png">
             <style>
+              /* Service brand colours — the only per-service part of this page (framework guideline §5.2). */
+              :root{--brand:#1f9d3a;--brand-hover:#198232;--brand-tint:rgba(31,157,58,.1)}
               body{font-family:system-ui,sans-serif;background:#f4f5f7;margin:0;padding:2rem;color:#1a1a2e}
               .card{max-width:24rem;margin:3rem auto;background:#fff;border-radius:12px;padding:1.75rem;
                     box-shadow:0 2px 12px rgba(0,0,0,.08)}
               h1{font-size:1.2rem;margin:0 0 1rem} label{display:block;margin:.75rem 0 .25rem;font-size:.85rem;font-weight:600}
               input{width:100%;box-sizing:border-box;padding:.6rem;border:1px solid #cbd0d8;border-radius:8px;font-size:1rem;
                     background:#fff;color:#1a1a2e}
-              button{margin-top:1.25rem;width:100%;padding:.7rem;border:0;border-radius:8px;background:#1f9d3a;color:#fff;
-                     font-size:1rem;font-weight:600;cursor:pointer} button:hover{background:#198232}
+              button{margin-top:1.25rem;width:100%;padding:.7rem;border:0;border-radius:8px;background:var(--brand);color:#fff;
+                     font-size:1rem;font-weight:600;cursor:pointer} button:hover{background:var(--brand-hover)}
               button:disabled{opacity:.65;cursor:progress} input:read-only{opacity:.65}
               .secret{position:relative} .secret input{padding-right:4.5rem}
               button.reveal{position:absolute;right:.35rem;top:50%;transform:translateY(-50%);margin:0;width:auto;
-                            padding:.3rem .65rem;font-size:.78rem;font-weight:600;background:transparent;color:#1f9d3a;
+                            padding:.3rem .65rem;font-size:.78rem;font-weight:600;background:transparent;color:var(--brand);
                             border-radius:6px}
-              button.reveal:hover{background:rgba(31,157,58,.1)}
-              button.reveal:focus-visible{outline:2px solid #1f9d3a;outline-offset:1px}
+              button.reveal:hover{background:var(--brand-tint)}
+              button.reveal:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
               .error{background:#fde8e8;color:#9b1c1c;padding:.6rem .75rem;border-radius:8px;font-size:.85rem}
               .field-hint{color:#667085;font-size:.72rem;margin:.3rem 0 0}
               .hint{color:#667085;font-size:.78rem;margin-top:1rem}
@@ -319,8 +321,8 @@ public static class OAuthEndpoints
                 .card{background:#1a1d27;box-shadow:0 2px 12px rgba(0,0,0,.4)}
                 input{background:#0f1117;color:#e6e8ee;border-color:#3a3f4b}
                 input::placeholder{color:#8b90a0}
-                button{background:#2bb24c} button:hover{background:#3cc45d}
-                button.reveal{background:transparent;color:#3cc45d} button.reveal:hover{background:rgba(60,196,93,.15)}
+                :root{--brand:#2bb24c;--brand-hover:#3cc45d;--brand-tint:rgba(60,196,93,.15)}
+                button.reveal{color:var(--brand-hover)}
                 .error{background:#3a1b1d;color:#f3b4b4}
                 .field-hint,.hint{color:#9aa0b0}
               }

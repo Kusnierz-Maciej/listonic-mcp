@@ -42,7 +42,7 @@ underlying API: [`docs/API-NOTES.md`](docs/API-NOTES.md).
 
 | Transport | Used by | How a user signs in | Listonic account |
 |---|---|---|---|
-| **HTTP** (default) — `…/mcp` | remote clients (claude.ai, Claude Code, ChatGPT…) | **OAuth 2.1** sign-in page (recommended), or `X-Api-Key` + `Authorization: Basic` headers | each user's own |
+| **HTTP** (default) — `…/mcp` | remote clients (claude.ai, Claude Code, ChatGPT…) | **OAuth 2.1** sign-in page (recommended), or legacy `X-Api-Key` + `Authorization: Basic` headers | each user's own |
 | **stdio** (`--stdio`) | clients that start the server as a subprocess | none — local process | one, from `Listonic__Email` / `Listonic__Password` |
 
 - **OAuth** — the client discovers the endpoints and opens a sign-in page where the user enters an
@@ -50,8 +50,9 @@ underlying API: [`docs/API-NOTES.md`](docs/API-NOTES.md).
   credentials are checked against Listonic, then kept only inside an encrypted token held by the client —
   never stored on the server. Sessions refresh silently (by default access tokens last an hour, refresh
   tokens a year); removing a key and restarting ends every session created with it.
-- **Headers** — `X-Api-Key: <key>` plus `Authorization: Basic base64(email:password)`, for clients that
-  support custom headers.
+- **Headers (legacy)** — `X-Api-Key: <key>` plus `Authorization: Basic base64(email:password)`, for clients
+  that support custom headers. Still supported, but prefer OAuth: with headers your Listonic password sits in
+  the client's config.
 - There is **no server-side default account** in HTTP mode.
 - **No API key at all:** set `Security__RequireMcpApiKey=false` for a trusted private deployment —
   Listonic email + password are still required.
@@ -99,7 +100,7 @@ then sign in on the page that opens (API key + Listonic email/password).
 { "mcpServers": { "listonic": { "type": "http", "url": "https://your-host/mcp" } } }
 ```
 
-or, with headers instead of OAuth:
+or, with the legacy headers instead of OAuth:
 
 ```json
 {
