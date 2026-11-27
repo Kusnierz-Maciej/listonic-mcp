@@ -99,7 +99,8 @@ builder.Services
     })
     .WithHttpTransport()
     .WithListonicTools()
-    .WithListonicPrompts(builder.Configuration);
+    .WithListonicPrompts(builder.Configuration)
+    .WithRequestFilters(filters => filters.AddCallToolFilter(ClientContextFilter.Create));
 
 var app = builder.Build();
 

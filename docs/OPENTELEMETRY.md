@@ -72,6 +72,9 @@ Each trace is built from four span sources:
 | `items.missing` | delete_items: ids not on the list (nothing deleted for them) |
 | `items.ticked`, `items.unticked`, `items.renamed`, `items.quantity_changed` | edit_items: what kind of change |
 | `outcome` | every tool |
+| `client.name`, `client.version` | every tool call: the calling MCP client (from `_meta` `io.modelcontextprotocol/clientInfo`, else the initialize handshake) |
+| `client.trace_context` | every tool call: `meta` (client sent `traceparent` in `params._meta`), `http` (HTTP `traceparent` header) or `none` |
+| `client.meta_keys` | every tool call: the `_meta` key **names** the client sent (never values) |
 
 Long lists are capped at 20 values (the count tag has the full size); no passwords, tokens or payloads.
 
@@ -81,6 +84,17 @@ Long lists are capped at 20 values (the count tag has the full size); no passwor
 |---|---|
 | `ok`, `created`, `added`, `edited`, `deleted`, `renamed` | no |
 | `not_found`, `forbidden`, `credentials_rejected`, `rate_limited`, `unavailable`, `rejected_request` | yes |
+
+**One trace per chat turn.** If the client propagates W3C trace context — `traceparent` in `params._meta`
+(SEP-414) or the HTTP `traceparent` header — the server continues the client's trace, so all tool calls of one turn
+land in **one trace**. Whether a client does this shows up as `listonic.client.trace_context` (plus a log line per
+call: `tools/call <tool> from <client> <version>: trace context <meta|http|none>; _meta keys [...]`). Clients that
+don't (`none`) get one trace per tool call; group those by `user.email` and time.
+
+```
+{ span.listonic.client.trace_context = "meta" }                   # calls that joined a client trace
+{ span.listonic.client.name = "claude-code" }                     # per client (name as the client reports it)
+```
 
 A `401` from Listonic adds a `listonic.token_rejected_retrying` event to the tool span (explains the
 duplicate HTTP span that follows the re-login).

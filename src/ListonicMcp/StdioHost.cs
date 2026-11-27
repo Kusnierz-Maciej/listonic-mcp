@@ -34,7 +34,8 @@ public static class StdioHost
         })
             .WithStdioServerTransport()
             .WithListonicTools()
-            .WithListonicPrompts(builder.Configuration);
+            .WithListonicPrompts(builder.Configuration)
+            .WithRequestFilters(filters => filters.AddCallToolFilter(ClientContextFilter.Create));
 
         var host = builder.Build();
         if (!StartupValidation.TryValidate(host.Services))
