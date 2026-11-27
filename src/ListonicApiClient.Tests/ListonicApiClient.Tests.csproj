@@ -7,7 +7,7 @@
         <OutputType>Exe</OutputType>
         <IsPackable>false</IsPackable>
         <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
-        <UserSecretsId>listonic-api-client-tests</UserSecretsId>
+        <UserSecretsId>listonic-api-tests</UserSecretsId>
     </PropertyGroup>
 
     <ItemGroup>

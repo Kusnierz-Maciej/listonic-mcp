@@ -1,63 +1,90 @@
 using System.Text;
+using ListonicMcp.Security.OAuth;
 
 namespace ListonicMcp.Security;
 
-public class ApiKeyMiddleware
+/// <summary>
+/// Gates <c>/mcp</c> with either (a) a valid OAuth 2.1 Bearer access token issued by this server, or
+/// (b) the header scheme: <c>X-Api-Key</c> (an allowlisted key, unless keys are turned off) +
+/// <c>Authorization: Basic base64(email:password)</c>. Both resolve to the per-request Listonic credentials
+/// stashed in <see cref="HttpContext.Items"/> for the credential provider. There is no server-side
+/// default account.
+/// </summary>
+public class ApiKeyMiddleware(RequestDelegate next)
 {
     public const string EmailItemKey    = "listonic-email";
     public const string PasswordItemKey = "listonic-password";
 
-    private readonly RequestDelegate _next;
-    private readonly string? _apiKey;
-    private readonly string? _fallbackEmail;
-    private readonly string? _fallbackPassword;
-
-    public ApiKeyMiddleware(RequestDelegate next, IConfiguration configuration)
+    public async Task InvokeAsync(
+        HttpContext context,
+        CredentialTokenService tokens,
+        ApiKeyAllowlist allowlist,
+        ILogger<ApiKeyMiddleware> logger)
     {
-        _next = next;
-        _apiKey           = NullIfEmpty(configuration["Security:ApiKey"]);
-        _fallbackEmail    = NullIfEmpty(configuration["Listonic:Email"]);
-        _fallbackPassword = NullIfEmpty(configuration["Listonic:Password"]);
-    }
+        var authHeader = context.Request.Headers.Authorization.FirstOrDefault();
 
-    private static string? NullIfEmpty(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? null : value;
+        // Path A: OAuth Bearer access token.
+        if (authHeader is not null && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            var payload = tokens.TryUnprotect(authHeader["Bearer ".Length..].Trim(), TokenKind.Access);
 
-    public async Task InvokeAsync(HttpContext context)
-    {
-        if (!string.IsNullOrWhiteSpace(_apiKey))
+            // Kill-switch: the embedded API-key hash must still be in the current allowlist.
+            if (payload is null || !allowlist.IsHashAllowed(payload.ApiKeyHash))
+            {
+                logger.LogWarning("Rejected /mcp request: OAuth token invalid, expired, or its API key was revoked.");
+                await Challenge(context);
+                return;
+            }
+
+            context.Items[EmailItemKey]    = payload.Email;
+            context.Items[PasswordItemKey] = payload.Password;
+            await next(context);
+            return;
+        }
+
+        // Path B: X-Api-Key + Basic. The key gate is enforced unless Security:RequireMcpApiKey is off.
+        if (allowlist.RequireApiKey)
         {
             var provided = context.Request.Headers["X-Api-Key"].FirstOrDefault();
-
-            if (provided != _apiKey)
+            if (!allowlist.IsAllowed(provided))
             {
+                logger.LogWarning("Rejected /mcp request: missing or incorrect X-Api-Key.");
+                // No key at all usually means an OAuth client that hasn't signed in yet: point it at the
+                // metadata. A wrong key is a plain 401.
+                if (string.IsNullOrEmpty(provided) && authHeader is null)
+                {
+                    await Challenge(context);
+                    return;
+                }
                 context.Response.StatusCode = StatusCodes.Status401Unauthorized;
                 await context.Response.WriteAsync("Unauthorized");
                 return;
             }
         }
 
-        var (email, password) = ParseBasicAuth(context.Request.Headers.Authorization.FirstOrDefault());
-
-        if (string.IsNullOrWhiteSpace(email) && string.IsNullOrWhiteSpace(password))
-        {
-            email    = _fallbackEmail;
-            password = _fallbackPassword;
-        }
-
+        var (email, password) = ParseBasicAuth(authHeader);
         if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
         {
-            context.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await context.Response.WriteAsync(
-                "Listonic credentials are required. Provide an Authorization: Basic header, " +
-                "or configure Listonic:Email and Listonic:Password on the server.");
+            await Challenge(context,
+                "Listonic credentials are required. Authorize via OAuth, or send an " +
+                "Authorization: Basic header with your Listonic email and password.");
             return;
         }
 
         context.Items[EmailItemKey]    = email;
         context.Items[PasswordItemKey] = password;
+        await next(context);
+    }
 
-        await _next(context);
+    /// <summary>Emits 401 + a WWW-Authenticate pointing at the protected-resource metadata so clients (re-)auth.</summary>
+    private static async Task Challenge(HttpContext context, string? message = null)
+    {
+        var resourceMetadata = $"{context.Request.Scheme}://{context.Request.Host}{context.Request.PathBase}" +
+                               "/.well-known/oauth-protected-resource";
+        context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+        context.Response.Headers.WWWAuthenticate = $"Bearer resource_metadata=\"{resourceMetadata}\"";
+        if (message is not null)
+            await context.Response.WriteAsync(message);
     }
 
     private static (string? email, string? password) ParseBasicAuth(string? header)
@@ -72,7 +99,7 @@ public class ApiKeyMiddleware
             if (sep < 0) return (null, null);
             return (decoded[..sep], decoded[(sep + 1)..]);
         }
-        catch
+        catch (FormatException)
         {
             return (null, null);
         }

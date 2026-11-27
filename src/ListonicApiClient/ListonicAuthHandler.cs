@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Headers;
-using ListonicApiClient.Models.Login;
-using Refit;
+using Microsoft.Extensions.Logging;
 
 namespace ListonicApiClient;
 
@@ -9,11 +8,19 @@ public class ListonicAuthHandler : DelegatingHandler
 {
     private readonly IListonicCredentialProvider _credentials;
     private readonly ListonicTokenStore _tokens;
+    private readonly IHttpClientFactory _httpClientFactory;
+    private readonly ILogger<ListonicAuthHandler>? _logger;
 
-    public ListonicAuthHandler(IListonicCredentialProvider credentials, ListonicTokenStore tokens)
+    public ListonicAuthHandler(
+        IListonicCredentialProvider credentials,
+        ListonicTokenStore tokens,
+        IHttpClientFactory httpClientFactory,
+        ILogger<ListonicAuthHandler>? logger = null)
     {
         _credentials = credentials;
         _tokens = tokens;
+        _httpClientFactory = httpClientFactory;
+        _logger = logger;
     }
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -27,30 +34,51 @@ public class ListonicAuthHandler : DelegatingHandler
 
         if (response.StatusCode == HttpStatusCode.Unauthorized)
         {
+            _logger?.LogWarning("Listonic returned HTTP 401; invalidating the cached token and re-logging in once.");
+            // Explains the duplicate HTTP span that follows (same request re-sent with a fresh token).
+            ListonicTelemetry.Event("listonic.token_rejected_retrying", ("url.path", request.RequestUri?.AbsolutePath));
             _tokens.Invalidate(credentials, token);
 
             token = await _tokens.GetOrLoginAsync(credentials, ct => LoginAsync(credentials, ct), cancellationToken);
 
             var retryRequest = await CloneRequestAsync(request);
             retryRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            response.Dispose();
             response = await base.SendAsync(retryRequest, cancellationToken);
+
+            // Still 401 with a token we just obtained: the credentials themselves are no longer accepted.
+            // Surface that distinctly so the MCP layer can force re-authentication.
+            if (response.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                _logger?.LogError("Listonic still returned HTTP 401 after a fresh login — credentials rejected.");
+                _tokens.Invalidate(credentials, token);
+                response.Dispose();
+                ListonicTelemetry.Fail("credentials_rejected", "HTTP 401 after re-login");
+                throw new ListonicCredentialsRejectedException("HTTP 401 after re-login");
+            }
         }
 
         return response;
     }
 
-    private static async Task<string> LoginAsync(ListonicClientOptions credentials, CancellationToken cancellationToken)
+    private async Task<string> LoginAsync(ListonicClientOptions credentials, CancellationToken cancellationToken)
     {
-        var loginApi = RestService.For<IListonicApi>(
-            new HttpClient { BaseAddress = new Uri(ListonicClientOptions.BaseUrl) });
+        // Only runs on a token-cache miss, so the span marks when (and how often) we really log in.
+        using var activity = ListonicTelemetry.Source.StartActivity("listonic.login");
+        activity?.SetTag(ListonicTelemetry.Tags.UserEmail, credentials.Email);
+        var outcome = await ListonicLogin.TryLoginAsync(
+            _httpClientFactory, credentials.Email, credentials.Password, _logger, cancellationToken);
+        activity?.SetTag(ListonicTelemetry.Tags.Outcome, outcome.Kind.ToString());
+        if (outcome.Kind != LoginOutcomeKind.Ok)
+            activity?.SetStatus(System.Diagnostics.ActivityStatusCode.Error, outcome.Kind.ToString());
 
-        var response = await loginApi.LoginAsync(new LoginRequest
+        return outcome.Kind switch
         {
-            Username = credentials.Email,
-            Password = credentials.Password
-        }, cancellationToken);
-
-        return response.AccessToken;
+            LoginOutcomeKind.Ok => outcome.Token!,
+            LoginOutcomeKind.BadCredentials => throw new ListonicCredentialsRejectedException(outcome.Detail),
+            _ => throw new HttpRequestException(
+                $"Listonic login failed with an API error ({outcome.Detail}). Try again shortly."),
+        };
     }
 
     private static async Task<HttpRequestMessage> CloneRequestAsync(HttpRequestMessage original)

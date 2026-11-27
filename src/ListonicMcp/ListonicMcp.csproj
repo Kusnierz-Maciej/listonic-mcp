@@ -4,9 +4,10 @@
         <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
-        <Version>1.10.2</Version>
+        <UserSecretsId>listonic-mcp</UserSecretsId>
     </PropertyGroup>
 
+    <!-- No <Version> here: the release workflow passes -p:Version from the git tag (the source of truth). -->
     <PropertyGroup>
         <ContainerBaseImage>mcr.microsoft.com/dotnet/aspnet:10.0-alpine</ContainerBaseImage>
         <ContainerRepository>listonic-mcp</ContainerRepository>
@@ -16,11 +17,25 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="ListonicMcp.Tests" />
+        <InternalsVisibleTo Include="Listonic.Sandbox" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <!-- Inlined into the MCP serverInfo icons (see McpServerIdentity); also served as static files. -->
+        <EmbeddedResource Include="wwwroot\icon-192.png" LogicalName="ListonicMcp.Icons.icon-192.png" />
+        <EmbeddedResource Include="wwwroot\icon-512.png" LogicalName="ListonicMcp.Icons.icon-512.png" />
+    </ItemGroup>
+
+    <ItemGroup>
         <ContainerPort Include="8080" Type="tcp" />
     </ItemGroup>
 
     <ItemGroup>
         <PackageReference Include="ModelContextProtocol.AspNetCore" />
+        <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+        <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
     </ItemGroup>
 
     <ItemGroup>

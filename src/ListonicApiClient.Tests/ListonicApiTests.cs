@@ -4,20 +4,19 @@ using ListonicApiClient.Models.Lists;
 namespace ListonicApiClient.Tests;
 
 [Category("LiveApi")]
+[NotInParallel(LiveApi.Serial)]
 public class ListonicApiTests
 {
-    private const string TestPrefix = "[test] ";
+    private const string TestPrefix = LiveApi.TestPrefix;
 
     private readonly IListonicApi _api = ApiClientFactory.Api;
 
+    // Before (once per run): removes "[test] " lists left by a crashed previous run. After: normal cleanup.
+    [Before(HookType.Class)]
+    public static Task SweepBefore() => LiveApi.SweepOnceAtStartAsync();
+
     [After(HookType.Class)]
-    public static async Task CleanUp()
-    {
-        var api = ApiClientFactory.Api;
-        var lists = await api.GetListsAsync(new GetListsRequest());
-        foreach (var list in lists.Where(l => l.Name.StartsWith(TestPrefix)))
-            await api.DeleteListAsync(list.Id);
-    }
+    public static Task SweepAfter() => LiveApi.SweepTestListsAsync();
 
     [Test]
     public async Task Login_WithValidCredentials_Succeeds()

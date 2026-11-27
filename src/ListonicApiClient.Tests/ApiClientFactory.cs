@@ -8,12 +8,15 @@ internal static class ApiClientFactory
 {
     private sealed class Marker;
 
-    private static readonly Lazy<(IListonicApi Api, ListonicClientOptions Options)> _instance = new(Build);
+    private static readonly Lazy<(IListonicApi Api, ListonicClientOptions Options, IServiceProvider Services)> _instance = new(Build);
 
     public static IListonicApi Api => _instance.Value.Api;
     public static ListonicClientOptions Options => _instance.Value.Options;
 
-    private static (IListonicApi, ListonicClientOptions) Build()
+    /// <summary>The container behind <see cref="Api"/> (same handler chain: rate limit, factory login client).</summary>
+    public static IServiceProvider Services => _instance.Value.Services;
+
+    private static (IListonicApi, ListonicClientOptions, IServiceProvider) Build()
     {
         var config = new ConfigurationBuilder()
             .AddUserSecrets<Marker>(optional: true)
@@ -27,7 +30,8 @@ internal static class ApiClientFactory
         var services = new ServiceCollection();
         services.AddSingleton<IListonicCredentialProvider>(new StaticCredentialProvider(options));
         services.AddListonicApiClient();
-        return (services.BuildServiceProvider().GetRequiredService<IListonicApi>(), options);
+        var provider = services.BuildServiceProvider();
+        return (provider.GetRequiredService<IListonicApi>(), options, provider);
     }
 
     private sealed class StaticCredentialProvider(ListonicClientOptions options) : IListonicCredentialProvider

@@ -1,6 +1,8 @@
 using ListonicApiClient;
 using ListonicMcp.Listonic;
+using ListonicMcp.Prompts;
 using ListonicMcp.Tools;
+using Microsoft.Extensions.Options;
 
 namespace ListonicMcp;
 
@@ -16,15 +18,28 @@ public static class StdioHost
         // stdout carries the MCP protocol, so all logs go to stderr.
         builder.Logging.AddConsole(o => o.LogToStandardErrorThreshold = LogLevel.Trace);
 
+        builder.Services.AddOptions<StdioCredentialsOptions>()
+            .Bind(builder.Configuration.GetSection(StdioCredentialsOptions.Section))
+            .ValidateOnStart();
+        builder.Services.AddSingleton<IValidateOptions<StdioCredentialsOptions>, StdioCredentialsOptionsValidator>();
         builder.Services.AddTransient<IListonicCredentialProvider, ConfigurationCredentialProvider>();
-        builder.Services.AddListonicApiClient();
-        builder.Services.AddScoped<ListonicApiAccessor>();
+        builder.Services.AddListonicApiClient(
+            rateLimit: builder.Configuration.GetSection(ListonicRateLimitOptions.Section));
 
         builder.Services
-            .AddMcpServer(options => options.ServerInstructions = McpInstructions.Text)
+            .AddMcpServer(options =>
+        {
+            options.ServerInfo = McpServerIdentity.Create();
+            options.ServerInstructions = McpInstructions.Text;
+        })
             .WithStdioServerTransport()
-            .WithTools<ListonicTools>();
+            .WithListonicTools()
+            .WithListonicPrompts(builder.Configuration);
 
-        await builder.Build().RunAsync();
+        var host = builder.Build();
+        if (!StartupValidation.TryValidate(host.Services))
+            return;
+
+        await host.RunAsync();
     }
 }

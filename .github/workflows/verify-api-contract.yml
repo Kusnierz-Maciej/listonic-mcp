@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       ref:
-        description: 'Tag, branch or SHA to test (default: latest v* tag)'
+        description: 'Tag, branch or SHA to test (default: latest released v* tag)'
         required: false
 
 concurrency:
@@ -36,9 +36,18 @@ jobs:
         id: ref
         env:
           INPUT_REF: ${{ inputs.ref }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          ref="${INPUT_REF:-$(git tag -l 'v*' --sort=-v:refname | head -1)}"
-          if [ -z "$ref" ]; then echo "No v* tag found"; exit 1; fi
+          ref="$INPUT_REF"
+          if [ -z "$ref" ]; then
+            # Default: the latest v* tag that has a PUBLISHED release. This skips a
+            # "dangling" tag whose release workflow failed (tag pushed, no image/release),
+            # so the scheduled check doesn't test an unreleased commit.
+            for t in $(git tag -l 'v*' --sort=-v:refname); do
+              if gh release view "$t" >/dev/null 2>&1; then ref="$t"; break; fi
+            done
+          fi
+          if [ -z "$ref" ]; then echo "No released v* tag found"; exit 1; fi
           git checkout --detach "$ref"
           echo "ref=$ref" >> "$GITHUB_OUTPUT"
           echo "Testing **$ref** ($(git rev-parse --short HEAD))" >> "$GITHUB_STEP_SUMMARY"
