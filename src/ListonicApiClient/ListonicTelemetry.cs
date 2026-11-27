@@ -35,6 +35,10 @@ public static class ListonicTelemetry
         public const string ItemsRenamed = "listonic.items.renamed";
         public const string ItemsQuantityChanged = "listonic.items.quantity_changed";
         public const string CompletionMatches = "listonic.completion.matches";
+        public const string ClientName = "listonic.client.name";
+        public const string ClientVersion = "listonic.client.version";
+        public const string ClientTraceContext = "listonic.client.trace_context";
+        public const string ClientMetaKeys = "listonic.client.meta_keys";
         public const string Outcome = "listonic.outcome";
     }
 

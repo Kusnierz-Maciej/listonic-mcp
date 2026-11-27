@@ -50,6 +50,8 @@ if (telemetry.Enabled)
             .AddSource("System.Net.Http")
             // App spans: listonic.login; business tags on tool spans.
             .AddSource(ListonicTelemetry.SourceName)
+            // "POST /mcp [tools/call get_items]" instead of "POST /mcp/" (see McpSpanNames); before the exporter.
+            .AddProcessor(new McpSpanNames.Processor())
             .AddOtlpExporter(o =>
             {
                 if (otlpEndpoint is not null) o.Endpoint = otlpEndpoint;
@@ -99,7 +101,9 @@ builder.Services
     })
     .WithHttpTransport()
     .WithListonicTools()
-    .WithListonicPrompts(builder.Configuration);
+    .WithListonicPrompts(builder.Configuration)
+    .WithMessageFilters(filters => filters.AddIncomingFilter(McpSpanNames.MessageFilter))
+    .WithRequestFilters(filters => filters.AddCallToolFilter(ClientContextFilter.Create));
 
 var app = builder.Build();
 
@@ -132,6 +136,9 @@ app.UseWhen(
     ctx => ctx.Request.Path.StartsWithSegments("/mcp"),
     branch =>
     {
+        // Names the request span after its MCP message ("POST /mcp [tools/call get_items]"); outermost, so the name
+        // is set when the request finishes.
+        branch.Use(McpSpanNames.Middleware);
         branch.UseMiddleware<ApiKeyMiddleware>();
         branch.UseMiddleware<UserScopeMiddleware>();
     });
