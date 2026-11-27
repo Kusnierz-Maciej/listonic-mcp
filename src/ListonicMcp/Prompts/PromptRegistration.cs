@@ -35,7 +35,10 @@ internal static class PromptRegistration
         {
             var api = request.Services!.GetRequiredService<IListonicApi>();
             var lists = await api.GetListsAsync(new GetListsRequest { IncludeShares = true }, ct);
-            return Complete(lists.Select(l => l.Name), request.Params.Argument.Value);
+            var result = Complete(lists.Select(l => l.Name), request.Params.Argument.Value);
+            ListonicTelemetry.Tag(ListonicTelemetry.Tags.ListsCount, lists.Count);
+            ListonicTelemetry.Tag(ListonicTelemetry.Tags.CompletionMatches, result.Completion.Total);
+            return result;
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

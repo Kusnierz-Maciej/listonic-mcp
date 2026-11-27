@@ -44,10 +44,24 @@ Each trace is built from four span sources:
 | ASP.NET Core instrumentation | incoming request (root), e.g. `POST /mcp` — tagged `user.email`; unhandled exceptions recorded. Static icons and `/.well-known/*` are not traced. |
 | `Experimental.ModelContextProtocol` (MCP SDK) | one per JSON-RPC request, e.g. `tools/call get_items` — tagged `gen_ai.tool.name`, `mcp.method.name`, `mcp.session.id` |
 | `System.Net.Http` (.NET built-in) | each outbound Listonic API call (query strings redacted, the .NET default) |
-| `Listonic` (app) | `listonic.login` — only on a token-cache miss, so it shows when (and how often) the server really logs in |
+| `Listonic` (app) | `listonic.login` — only on a token-cache miss, so it shows when (and how often) the server really logs in. **Phase spans** inside tools, so the backend calls of each step group together: `listonic.items.add`, `listonic.items.update`, `listonic.items.lookup`, `listonic.items.delete`, `listonic.items.reread`, `listonic.verify_list_exists` |
 
-**Business tags** on the tool span (`listonic.*`): `list.id`, `list.name`, `lists.count`,
-`items.count`, and `outcome`.
+**Business tags** on the tool span (`listonic.*`):
+
+| Tag | Set by |
+|---|---|
+| `list.id`, `list.name` | every tool that targets a list (create_list: the new list) |
+| `list.new_name` | rename_list |
+| `lists.count`, `lists.shared`, `items.unchecked` | get_lists (also `lists.count` + `completion.matches` on prompt completions) |
+| `items.count` | items requested (writes) / returned (get_items) |
+| `items.unchecked`, `items.checked` | get_items |
+| `items.names` | add/edit/delete: the item names (first 20) |
+| `items.ids`, `items.affected` | add/edit/delete: ids actually written (first 20) and how many |
+| `items.missing` | delete_items: ids not on the list (nothing deleted for them) |
+| `items.ticked`, `items.unticked`, `items.renamed`, `items.quantity_changed` | edit_items: what kind of change |
+| `outcome` | every tool |
+
+Long lists are capped at 20 values (the count tag has the full size); no passwords, tokens or payloads.
 
 **Outcomes** — failures the tool reports as a plain error message set span status **Error**:
 

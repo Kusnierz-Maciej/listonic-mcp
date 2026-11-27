@@ -46,6 +46,8 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
         }, ct);
 
         ListonicTelemetry.Tag(ListonicTelemetry.Tags.ListsCount, lists.Count);
+        ListonicTelemetry.Tag(ListonicTelemetry.Tags.ListsShared, lists.Count(l => l.Shares.Count > 1));
+        ListonicTelemetry.Tag(ListonicTelemetry.Tags.ItemsUnchecked, lists.Sum(l => l.ItemsCount - l.CheckedItemsCount));
         ListonicTelemetry.Outcome("ok");
         logger.LogInformation("get_lists: {Count} list(s)", lists.Count);
 
@@ -75,6 +77,8 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
         TagList(listId, listName);
         var items = await api.GetItemsAsync(listId, ct);
         ListonicTelemetry.Tag(ListonicTelemetry.Tags.ItemsCount, items.Count);
+        ListonicTelemetry.Tag(ListonicTelemetry.Tags.ItemsUnchecked, items.Count(i => !i.Checked));
+        ListonicTelemetry.Tag(ListonicTelemetry.Tags.ItemsChecked, items.Count(i => i.Checked));
         ListonicTelemetry.Outcome("ok");
         logger.LogInformation("get_items [{ListId}] {ListName}: {Count} item(s), {Unchecked} unchecked",
             listId, listName, items.Count, items.Count(i => !i.Checked));
@@ -83,7 +87,8 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
         {
             // Listonic answers 200 [] for an unknown list id too; GET /lists/{id} 404s for those
             // (mapped to "not found" by the guard), so a wrong id isn't reported as an empty list.
-            await api.GetListAsync(listId, ct);
+            using (ListonicTelemetry.Phase("listonic.verify_list_exists"))
+                await api.GetListAsync(listId, ct);
             return "List is empty.";
         }
 
@@ -105,25 +110,33 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
     {
         TagList(listId, listName);
         ListonicTelemetry.Tag(ListonicTelemetry.Tags.ItemsCount, items.Count);
+        ListonicTelemetry.Tag(ListonicTelemetry.Tags.ItemNames, ListonicTelemetry.Capped(items.Select(i => i.Name)));
         var addedIds = new List<string>();
-        foreach (var item in items)
+        using (ListonicTelemetry.Phase("listonic.items.add", (ListonicTelemetry.Tags.ItemsCount, items.Count)))
         {
-            var result = await api.AddItemAsync(listId, new AddItemRequest
+            foreach (var item in items)
             {
-                Name = item.Name,
-                Quantity = item.Amount,
-                Unit = item.Unit,
-            }, ct);
-            addedIds.Add(result.Id);
+                var result = await api.AddItemAsync(listId, new AddItemRequest
+                {
+                    Name = item.Name,
+                    Quantity = item.Amount,
+                    Unit = item.Unit,
+                }, ct);
+                addedIds.Add(result.Id);
+            }
         }
 
+        ListonicTelemetry.Tag(ListonicTelemetry.Tags.ItemsAffected, addedIds.Count);
+        ListonicTelemetry.Tag(ListonicTelemetry.Tags.ItemIds, ListonicTelemetry.Capped(addedIds));
         ListonicTelemetry.Outcome("added");
         logger.LogInformation("add_items [{ListId}] {ListName}: added {Count} item(s)", listId, listName, addedIds.Count);
 
         if (addedIds.Count == 0)
             return "No items added.";
 
-        var allItems = await api.GetItemsAsync(listId, ct);
+        List<ShoppingItem> allItems;
+        using (ListonicTelemetry.Phase("listonic.items.reread"))
+            allItems = await api.GetItemsAsync(listId, ct);
         var added = allItems.Where(i => addedIds.Contains(i.Id)).ToList();
         return added.Count > 0
             ? string.Join("\n", added.Select(FormatItem))
@@ -146,26 +159,38 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
     {
         TagList(listId, listName);
         ListonicTelemetry.Tag(ListonicTelemetry.Tags.ItemsCount, items.Count);
+        ListonicTelemetry.Tag(ListonicTelemetry.Tags.ItemNames, ListonicTelemetry.Capped(items.Select(i => i.ConfirmName)));
+        ListonicTelemetry.Tag(ListonicTelemetry.Tags.ItemsTicked, items.Count(i => i.IsChecked == true));
+        ListonicTelemetry.Tag(ListonicTelemetry.Tags.ItemsUnticked, items.Count(i => i.IsChecked == false));
+        ListonicTelemetry.Tag(ListonicTelemetry.Tags.ItemsRenamed, items.Count(i => i.Name is not null));
+        ListonicTelemetry.Tag(ListonicTelemetry.Tags.ItemsQuantityChanged, items.Count(i => i.Amount is not null || i.Unit is not null));
         var editedIds = new List<string>();
-        foreach (var item in items)
+        using (ListonicTelemetry.Phase("listonic.items.update", (ListonicTelemetry.Tags.ItemsCount, items.Count)))
         {
-            await api.UpdateItemAsync(listId, item.ItemId, new UpdateItemRequest
+            foreach (var item in items)
             {
-                IsChecked = item.IsChecked,
-                Name = item.Name,
-                Amount = item.Amount,
-                Unit = item.Unit,
-            }, ct);
-            editedIds.Add(item.ItemId);
+                await api.UpdateItemAsync(listId, item.ItemId, new UpdateItemRequest
+                {
+                    IsChecked = item.IsChecked,
+                    Name = item.Name,
+                    Amount = item.Amount,
+                    Unit = item.Unit,
+                }, ct);
+                editedIds.Add(item.ItemId);
+            }
         }
 
+        ListonicTelemetry.Tag(ListonicTelemetry.Tags.ItemsAffected, editedIds.Count);
+        ListonicTelemetry.Tag(ListonicTelemetry.Tags.ItemIds, ListonicTelemetry.Capped(editedIds));
         ListonicTelemetry.Outcome("edited");
         logger.LogInformation("edit_items [{ListId}] {ListName}: edited {Count} item(s)", listId, listName, editedIds.Count);
 
         if (editedIds.Count == 0)
             return "No items edited.";
 
-        var allItems = await api.GetItemsAsync(listId, ct);
+        List<ShoppingItem> allItems;
+        using (ListonicTelemetry.Phase("listonic.items.reread"))
+            allItems = await api.GetItemsAsync(listId, ct);
         var updated = allItems.Where(i => editedIds.Contains(i.Id)).ToList();
         return updated.Count > 0
             ? string.Join("\n", updated.Select(FormatItem))
@@ -187,23 +212,34 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
     {
         TagList(listId, listName);
         ListonicTelemetry.Tag(ListonicTelemetry.Tags.ItemsCount, items.Count);
-        var allItems = await api.GetItemsAsync(listId, ct);
+        ListonicTelemetry.Tag(ListonicTelemetry.Tags.ItemNames, ListonicTelemetry.Capped(items.Select(i => i.ConfirmName)));
+        List<ShoppingItem> allItems;
+        using (ListonicTelemetry.Phase("listonic.items.lookup"))
+            allItems = await api.GetItemsAsync(listId, ct);
         var itemById = allItems.ToDictionary(i => i.Id);
 
         // Listonic answers 200 to DELETE of an id that isn't on the list, so check against the list
         // first and report missing ids instead of claiming they were deleted.
         var deleted = new List<string>();
+        var deletedIds = new List<string>();
         var missing = new List<string>();
-        foreach (var item in items)
+        using (ListonicTelemetry.Phase("listonic.items.delete", (ListonicTelemetry.Tags.ItemsCount, items.Count)))
         {
-            if (!itemById.TryGetValue(item.ItemId, out var si))
+            foreach (var item in items)
             {
-                missing.Add($"[{item.ItemId}] {item.ConfirmName}");
-                continue;
+                if (!itemById.TryGetValue(item.ItemId, out var si))
+                {
+                    missing.Add($"[{item.ItemId}] {item.ConfirmName}");
+                    continue;
+                }
+                await api.DeleteItemAsync(listId, item.ItemId, ct);
+                deleted.Add(FormatItem(si));
+                deletedIds.Add(item.ItemId);
             }
-            await api.DeleteItemAsync(listId, item.ItemId, ct);
-            deleted.Add(FormatItem(si));
         }
+        ListonicTelemetry.Tag(ListonicTelemetry.Tags.ItemsAffected, deletedIds.Count);
+        ListonicTelemetry.Tag(ListonicTelemetry.Tags.ItemsMissing, missing.Count);
+        ListonicTelemetry.Tag(ListonicTelemetry.Tags.ItemIds, ListonicTelemetry.Capped(deletedIds));
         ListonicTelemetry.Outcome("deleted");
         logger.LogInformation("delete_items [{ListId}] {ListName}: deleted {Count} item(s), {Missing} not on the list",
             listId, listName, deleted.Count, missing.Count);
@@ -246,7 +282,9 @@ public sealed class ListonicTools(IListonicApi api, ILogger<ListonicTools> logge
         TagList(listId, listName);
         // Listonic answers 200 to a rename of an unknown list id; GET /lists/{id} 404s for those
         // (mapped to "not found" by the guard), so a wrong id isn't reported as renamed.
-        await api.GetListAsync(listId, ct);
+        ListonicTelemetry.Tag(ListonicTelemetry.Tags.ListNewName, name);
+        using (ListonicTelemetry.Phase("listonic.verify_list_exists"))
+            await api.GetListAsync(listId, ct);
         await api.RenameListAsync(listId, new RenameListRequest { Id = listId, Name = name }, ct);
         ListonicTelemetry.Outcome("renamed");
         logger.LogInformation("rename_list [{ListId}] {ListName} -> {NewName}", listId, listName, name);

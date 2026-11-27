@@ -20,9 +20,40 @@ public static class ListonicTelemetry
         public const string UserEmail = "user.email";
         public const string ListId = "listonic.list.id";
         public const string ListName = "listonic.list.name";
+        public const string ListNewName = "listonic.list.new_name";
         public const string ListsCount = "listonic.lists.count";
+        public const string ListsShared = "listonic.lists.shared";
         public const string ItemsCount = "listonic.items.count";
+        public const string ItemsUnchecked = "listonic.items.unchecked";
+        public const string ItemsChecked = "listonic.items.checked";
+        public const string ItemNames = "listonic.items.names";
+        public const string ItemIds = "listonic.items.ids";
+        public const string ItemsAffected = "listonic.items.affected";
+        public const string ItemsMissing = "listonic.items.missing";
+        public const string ItemsTicked = "listonic.items.ticked";
+        public const string ItemsUnticked = "listonic.items.unticked";
+        public const string ItemsRenamed = "listonic.items.renamed";
+        public const string ItemsQuantityChanged = "listonic.items.quantity_changed";
+        public const string CompletionMatches = "listonic.completion.matches";
         public const string Outcome = "listonic.outcome";
+    }
+
+    /// <summary>Longest list attribute we record (names/ids); the matching count tag carries the full size.</summary>
+    public const int MaxListedValues = 20;
+
+    /// <summary>A capped string-array attribute value (first <see cref="MaxListedValues"/> entries).</summary>
+    public static string[] Capped(IEnumerable<string> values) => values.Take(MaxListedValues).ToArray();
+
+    /// <summary>
+    /// Starts a child span for one phase of a tool (pre-check, write batch, re-read…) so a trace shows where time
+    /// goes and which backend calls belong together. Dispose to end it. Null (free) when telemetry is off.
+    /// </summary>
+    public static Activity? Phase(string name, params (string Key, object? Value)[] tags)
+    {
+        var activity = Source.StartActivity(name);
+        if (activity is not null)
+            foreach (var (k, v) in tags) activity.SetTag(k, v);
+        return activity;
     }
 
     /// <summary>Sets a tag on the current span (the MCP <c>tools/call</c> span inside a tool).</summary>
