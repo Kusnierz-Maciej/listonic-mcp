@@ -91,6 +91,16 @@ land in **one trace**. Whether a client does this shows up as `listonic.client.t
 call: `tools/call <tool> from <client> <version>: trace context <meta|http|none>; _meta keys [...]`). Clients that
 don't (`none`) get one trace per tool call; group those by `user.email` and time.
 
+**Observed clients** (2026-11-27, local test with this server):
+
+| Client | Trace context | Result |
+|---|---|---|
+| Claude Code 2.1.332, default | `none` | one trace per tool call |
+| Claude Code 2.1.332 with its own telemetry on (`CLAUDE_CODE_ENABLE_TELEMETRY=1` + an OTLP traces exporter) | `http` (W3C `traceparent` header) | **all tool calls of one prompt share one trace**, each under its own Claude Code span |
+| claude.ai | not tested yet (deploy and check `listonic.client.trace_context`) | per public reports: no trace context, no conversation id |
+
+Claude Code also sends `claudecode/toolUseId` in `_meta`: an id per tool call, not per conversation.
+
 ```
 { span.listonic.client.trace_context = "meta" }                   # calls that joined a client trace
 { span.listonic.client.name = "claude-code" }                     # per client (name as the client reports it)
