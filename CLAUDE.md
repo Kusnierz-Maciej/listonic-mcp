@@ -76,7 +76,7 @@ Start the HTTP host with dev settings (the key and secret are throwaway dev valu
 ```sh
 Security__AllowedApiKeys__0=dev-key \
 Security__TokenSecret=dev-token-secret-at-least-32-chars-long \
-ASPNETCORE_URLS=http://127.0.0.1:5199 dotnet run --project src/ListonicMcp
+dotnet run --project src/ListonicMcp   # launch profile: http://localhost:5100
 ```
 
 Authenticate with the header path; build the Basic value from the live tests' user-secrets
@@ -86,7 +86,7 @@ Authenticate with the header path; build the Basic value from the live tests' us
 LB=$(dotnet user-secrets list --project src/ListonicApiClient.Tests | python3 -c 'import sys,base64
 d=dict(l.rstrip("\n").split(" = ",1) for l in sys.stdin if " = " in l)
 print(base64.b64encode((d["Listonic:Email"]+":"+d["Listonic:Password"]).encode()).decode())')
-I() { npx -y @modelcontextprotocol/inspector --cli http://127.0.0.1:5199/mcp \
+I() { npx -y @modelcontextprotocol/inspector --cli http://localhost:5100/mcp \
         --header "X-Api-Key: dev-key" --header "Authorization: Basic $LB" "$@"; }
 
 I --method tools/list --strict          # schema portability: full report on stderr, exit 6 on errors

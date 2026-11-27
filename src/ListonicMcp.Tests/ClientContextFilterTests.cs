@@ -25,7 +25,7 @@ public class ClientContextFilterTests
     {
         ActivitySource.AddActivityListener(new ActivityListener
         {
-            ShouldListenTo = s => s.Name == "Experimental.ModelContextProtocol",
+            ShouldListenTo = s => s.Name is "Experimental.ModelContextProtocol" or "Microsoft.AspNetCore",
             Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
             ActivityStopped = a => Spans.Add(a),
         });
@@ -46,7 +46,8 @@ public class ClientContextFilterTests
 
     /// <summary>Calls get_lists with the given _meta JSON (and optional HTTP traceparent); returns the tools/call span.</summary>
     /// <remarks><paramref name="metaJson"/> must contain a unique <c>"test.marker/&lt;guid&gt;"</c> key; it identifies the span.</remarks>
-    private static async Task<Activity> CallAsync(HttpClient http, string marker, string metaJson, string? httpTraceparent = null)
+    private static async Task<Activity> CallAsync(HttpClient http, string marker, string metaJson, string? httpTraceparent = null,
+        IDictionary<string, string>? headers = null)
     {
         var body = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"get_lists\",\"arguments\":{},\"_meta\":"
                    + metaJson + "}}";
@@ -59,6 +60,7 @@ public class ClientContextFilterTests
         request.Headers.Accept.ParseAdd("application/json");
         request.Headers.Accept.ParseAdd("text/event-stream");
         if (httpTraceparent is not null) request.Headers.Add("traceparent", httpTraceparent);
+        foreach (var (k, v) in headers ?? new Dictionary<string, string>()) request.Headers.Add(k, v);
 
         var response = await http.SendAsync(request);
         await Assert.That((int)response.StatusCode).IsEqualTo(200);
@@ -114,5 +116,52 @@ public class ClientContextFilterTests
         var span = await CallAsync(server.CreateClient(), marker, $$"""{"test.marker/{{marker}}":true}""");
 
         await Assert.That(span.GetTagItem(ListonicTelemetry.Tags.ClientTraceContext)).IsEqualTo("none");
+    }
+
+    /// <summary>The HTTP request span (Microsoft.AspNetCore) that is the parent of <paramref name="toolSpan"/>.</summary>
+    private static async Task<Activity> HttpSpanOf(Activity toolSpan)
+    {
+        for (var i = 0; i < 50; i++)
+        {
+            var span = Spans.FirstOrDefault(a => a.Source.Name == "Microsoft.AspNetCore" && a.SpanId == toolSpan.ParentSpanId);
+            if (span is not null) return span;
+            await Task.Delay(20);
+        }
+        throw new InvalidOperationException("HTTP request span not recorded");
+    }
+
+    [Test]
+    public async Task RequestSpan_NamedAfterMcpMessage_WhenNoHeaders()
+    {
+        await using var server = Server();
+        var marker = Guid.NewGuid().ToString("N");
+
+        var tool = await CallAsync(server.CreateClient(), marker, $$"""{"test.marker/{{marker}}":true}""");
+
+        await Assert.That((await HttpSpanOf(tool)).DisplayName).IsEqualTo("POST /mcp [tools/call get_lists]");
+    }
+
+    [Test]
+    public async Task RequestSpan_NamedFromMcpHeaders_WhenPresent()
+    {
+        await using var server = Server();
+        var marker = Guid.NewGuid().ToString("N");
+
+        var tool = await CallAsync(server.CreateClient(), marker, $$"""{"test.marker/{{marker}}":true}""",
+            headers: new Dictionary<string, string> { ["Mcp-Method"] = "tools/call", ["Mcp-Name"] = "from-header" });
+
+        await Assert.That((await HttpSpanOf(tool)).DisplayName).IsEqualTo("POST /mcp [tools/call from-header]");
+    }
+
+    [Test]
+    public async Task SpanNameProcessor_ReappliesMcpName_AfterInstrumentationRenamed()
+    {
+        using var activity = new Activity("test").Start();
+        activity.SetCustomProperty("mcp.span_name", "POST /mcp [tools/call get_lists]");
+        activity.DisplayName = "POST /mcp/";   // what the OTel ASP.NET Core instrumentation sets on stop
+
+        new McpSpanNames.Processor().OnEnd(activity);
+
+        await Assert.That(activity.DisplayName).IsEqualTo("POST /mcp [tools/call get_lists]");
     }
 }
