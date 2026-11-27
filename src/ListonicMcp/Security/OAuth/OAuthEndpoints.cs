@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using ListonicApiClient;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 
 namespace ListonicMcp.Security.OAuth;
 
@@ -14,10 +15,6 @@ namespace ListonicMcp.Security.OAuth;
 /// </summary>
 public static class OAuthEndpoints
 {
-    private static readonly TimeSpan CodeTtl = TimeSpan.FromSeconds(60);
-    private static readonly TimeSpan AccessTtl = TimeSpan.FromHours(1);
-    private static readonly TimeSpan RefreshTtl = TimeSpan.FromDays(365);
-
     public static void MapOAuthEndpoints(this IEndpointRouteBuilder app)
     {
         app.MapGet("/.well-known/oauth-protected-resource", ProtectedResourceMetadataDoc);
@@ -99,6 +96,7 @@ public static class OAuthEndpoints
         ApiKeyAllowlist allowlist,
         IListonicLoginValidator loginValidator,
         CredentialTokenService tokens,
+        IOptions<OAuthOptions> oauth,
         ILogger<Marker> logger,
         CancellationToken ct)
     {
@@ -150,7 +148,7 @@ public static class OAuthEndpoints
         var apiKeyHash = allowlist.RequireApiKey ? CredentialTokenService.HashApiKey(apiKey!) : string.Empty;
         var code = tokens.Protect(new TokenPayload(
             TokenKind.Code, email!, password!, apiKeyHash,
-            codeChallenge, redirectUri), CodeTtl);
+            codeChallenge, redirectUri), oauth.Value.AuthorizationCodeLifetime);
 
         logger.LogInformation("OAuth authorize: credentials validated, issuing authorization code.");
 
@@ -165,6 +163,7 @@ public static class OAuthEndpoints
         HttpContext ctx,
         ApiKeyAllowlist allowlist,
         CredentialTokenService tokens,
+        IOptions<OAuthOptions> oauth,
         ILogger<Marker> logger,
         CancellationToken ct)
     {
@@ -174,14 +173,14 @@ public static class OAuthEndpoints
 
         return grantType switch
         {
-            "authorization_code" => ExchangeCode(F, allowlist, tokens, logger),
-            "refresh_token" => Refresh(F, allowlist, tokens, logger),
+            "authorization_code" => ExchangeCode(F, allowlist, tokens, oauth.Value, logger),
+            "refresh_token" => Refresh(F, allowlist, tokens, oauth.Value, logger),
             _ => TokenError("unsupported_grant_type"),
         };
     }
 
     private static IResult ExchangeCode(
-        Func<string, string?> f, ApiKeyAllowlist allowlist, CredentialTokenService tokens, ILogger<Marker> logger)
+        Func<string, string?> f, ApiKeyAllowlist allowlist, CredentialTokenService tokens, OAuthOptions oauth, ILogger<Marker> logger)
     {
         var code = f("code");
         var verifier = f("code_verifier");
@@ -214,11 +213,11 @@ public static class OAuthEndpoints
         }
 
         logger.LogInformation("OAuth token: issuing access + refresh tokens.");
-        return IssueTokens(payload, tokens);
+        return IssueTokens(payload, tokens, oauth);
     }
 
     private static IResult Refresh(
-        Func<string, string?> f, ApiKeyAllowlist allowlist, CredentialTokenService tokens, ILogger<Marker> logger)
+        Func<string, string?> f, ApiKeyAllowlist allowlist, CredentialTokenService tokens, OAuthOptions oauth, ILogger<Marker> logger)
     {
         var refreshToken = f("refresh_token");
         var payload = tokens.TryUnprotect(refreshToken, TokenKind.Refresh);
@@ -236,21 +235,21 @@ public static class OAuthEndpoints
         }
 
         logger.LogInformation("OAuth refresh: re-minting access token (rotating refresh).");
-        return IssueTokens(payload, tokens);
+        return IssueTokens(payload, tokens, oauth);
     }
 
-    private static IResult IssueTokens(TokenPayload payload, CredentialTokenService tokens)
+    private static IResult IssueTokens(TokenPayload payload, CredentialTokenService tokens, OAuthOptions oauth)
     {
         var access = tokens.Protect(
-            payload with { Kind = TokenKind.Access, CodeChallenge = null, RedirectUri = null }, AccessTtl);
+            payload with { Kind = TokenKind.Access, CodeChallenge = null, RedirectUri = null }, oauth.AccessTokenLifetime);
         var refresh = tokens.Protect(
-            payload with { Kind = TokenKind.Refresh, CodeChallenge = null, RedirectUri = null }, RefreshTtl);
+            payload with { Kind = TokenKind.Refresh, CodeChallenge = null, RedirectUri = null }, oauth.RefreshTokenLifetime);
 
         return Results.Json(new Dictionary<string, object>
         {
             ["access_token"] = access,
             ["token_type"] = "Bearer",
-            ["expires_in"] = (int)AccessTtl.TotalSeconds,
+            ["expires_in"] = (int)oauth.AccessTokenLifetime.TotalSeconds,
             ["refresh_token"] = refresh,
         });
     }

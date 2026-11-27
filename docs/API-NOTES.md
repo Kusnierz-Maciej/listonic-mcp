@@ -82,5 +82,6 @@ all `[test] ` lists are swept once when the run starts (crash recovery) and afte
 
 ## Client-side rate limit
 
-All calls (login included) go through one token bucket: burst 15, then one request every 0.5 s.
+All calls (login included) go through one token bucket: by default burst 15, then one request every 0.5 s
+(`RateLimit__TokenLimit` / `RateLimit__ReplenishmentPeriod`).
 Requests over the limit wait in a queue; they never fail.

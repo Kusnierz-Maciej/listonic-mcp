@@ -23,7 +23,8 @@ public static class StdioHost
             .ValidateOnStart();
         builder.Services.AddSingleton<IValidateOptions<StdioCredentialsOptions>, StdioCredentialsOptionsValidator>();
         builder.Services.AddTransient<IListonicCredentialProvider, ConfigurationCredentialProvider>();
-        builder.Services.AddListonicApiClient();
+        builder.Services.AddListonicApiClient(
+            rateLimit: builder.Configuration.GetSection(ListonicRateLimitOptions.Section));
 
         builder.Services
             .AddMcpServer(options =>

@@ -17,6 +17,13 @@ services:
       #- Security__RequireMcpApiKey=true
       # MCP prompts (user-picked shortcuts + list-name completions); false removes them.
       #- Prompts__Enabled=true
+      # Client-side rate limit on every Listonic call (burst, then one call per period). Loosen at your own risk.
+      #- RateLimit__TokenLimit=15
+      #- RateLimit__ReplenishmentPeriod=00:00:00.5
+      # OAuth token lifetimes (refresh = how long a client may stay idle before signing in again).
+      #- OAuth__AuthorizationCodeLifetime=00:01:00
+      #- OAuth__AccessTokenLifetime=01:00:00
+      #- OAuth__RefreshTokenLifetime=365.00:00:00
 
       # Logging — human-readable single-line console (good for `docker logs` / Container Manager on the NAS).
       - Logging__LogLevel__Default=Information

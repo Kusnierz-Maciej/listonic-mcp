@@ -1,5 +1,7 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 using Polly;
 using Refit;
 
@@ -19,10 +21,22 @@ public static class ServiceCollectionExtensions
     /// closest to the socket — so a dump handler sees the fully-decorated request and fires once per
     /// physical send, including the auth handler's retry re-send.
     /// </param>
+    /// <param name="rateLimit">
+    /// Optional <c>RateLimit</c> configuration section (<see cref="ListonicRateLimitOptions"/>); defaults apply when
+    /// omitted. Values are validated at host start.
+    /// </param>
     public static IServiceCollection AddListonicApiClient(
         this IServiceCollection services,
-        Action<IHttpClientBuilder>? configureClient = null)
+        Action<IHttpClientBuilder>? configureClient = null,
+        IConfiguration? rateLimit = null)
     {
+        var rateLimitOptions = services.AddOptions<ListonicRateLimitOptions>();
+        if (rateLimit is not null)
+            rateLimitOptions.Bind(rateLimit);
+        rateLimitOptions.ValidateOnStart();
+        services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IValidateOptions<ListonicRateLimitOptions>, ListonicRateLimitOptionsValidator>());
+
         services.AddSingleton<ListonicTokenStore>();
         services.TryAddSingleton<ListonicRateLimiter>();
         services.AddTransient<ListonicAuthHandler>();

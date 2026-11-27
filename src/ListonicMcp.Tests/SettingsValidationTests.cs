@@ -51,3 +51,33 @@ public class SecuritySettingsValidationTests
     public async Task GoodSecret_WithKey_Passes() =>
         await Assert.That(Validate(GoodSecret, true, "key-1").Succeeded).IsTrue();
 }
+
+public class OAuthSettingsValidationTests
+{
+    private static bool Valid(Action<ListonicMcp.Security.OAuth.OAuthOptions> change)
+    {
+        var o = new ListonicMcp.Security.OAuth.OAuthOptions();
+        change(o);
+        return new ListonicMcp.Security.OAuth.OAuthOptionsValidator().Validate(null, o).Succeeded;
+    }
+
+    [Test]
+    public async Task Defaults_AreValid_1Min_1Hour_365Days()
+    {
+        var o = new ListonicMcp.Security.OAuth.OAuthOptions();
+        await Assert.That(Valid(_ => { })).IsTrue();
+        await Assert.That(o.AuthorizationCodeLifetime).IsEqualTo(TimeSpan.FromMinutes(1));
+        await Assert.That(o.AccessTokenLifetime).IsEqualTo(TimeSpan.FromHours(1));
+        await Assert.That(o.RefreshTokenLifetime).IsEqualTo(TimeSpan.FromDays(365));
+    }
+
+    [Test]
+    public async Task Rejects_NonPositive_LongCode_AndAccessLongerThanRefresh()
+    {
+        await Assert.That(Valid(o => o.AuthorizationCodeLifetime = TimeSpan.Zero)).IsFalse();
+        await Assert.That(Valid(o => o.AuthorizationCodeLifetime = TimeSpan.FromMinutes(11))).IsFalse();
+        await Assert.That(Valid(o => o.AccessTokenLifetime = TimeSpan.FromSeconds(-1))).IsFalse();
+        await Assert.That(Valid(o => o.RefreshTokenLifetime = TimeSpan.Zero)).IsFalse();
+        await Assert.That(Valid(o => { o.AccessTokenLifetime = TimeSpan.FromDays(2); o.RefreshTokenLifetime = TimeSpan.FromDays(1); })).IsFalse();
+    }
+}

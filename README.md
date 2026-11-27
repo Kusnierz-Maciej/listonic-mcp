@@ -48,8 +48,8 @@ underlying API: [`docs/API-NOTES.md`](docs/API-NOTES.md).
 - **OAuth** — the client discovers the endpoints and opens a sign-in page where the user enters an
   **MCP API key** (from `Security__AllowedApiKeys`) and their **Listonic email + password**. The
   credentials are checked against Listonic, then kept only inside an encrypted token held by the client —
-  never stored on the server. Sessions refresh silently (access tokens last an hour, refresh tokens a
-  year); removing a key and restarting ends every session created with it.
+  never stored on the server. Sessions refresh silently (by default access tokens last an hour, refresh
+  tokens a year); removing a key and restarting ends every session created with it.
 - **Headers** — `X-Api-Key: <key>` plus `Authorization: Basic base64(email:password)`, for clients that
   support custom headers.
 - There is **no server-side default account** in HTTP mode.
@@ -140,12 +140,14 @@ Set in the compose file (or `.env` for secrets) using the `Section__Key` convent
 | `Security__TokenSecret` | — | Required (secret). ≥ 32 chars, stable; secures OAuth tokens. |
 | `Security__RequireMcpApiKey` | `true` | `false` drops the API-key gate. |
 | `Prompts__Enabled` | `true` | `false` removes the MCP prompts (and list-name completions). |
+| `RateLimit__TokenLimit` / `RateLimit__ReplenishmentPeriod` | `15` / `00:00:00.5` | Client-side limit on Listonic calls: a burst, then one call per period (extra calls wait). Loosen at your own risk. |
+| `OAuth__AuthorizationCodeLifetime` / `__AccessTokenLifetime` / `__RefreshTokenLifetime` | `00:01:00` / `01:00:00` / `365.00:00:00` | Token lifetimes; the refresh lifetime is how long a client may stay idle before signing in again. |
 | `Telemetry__Enabled` | `false` | OpenTelemetry export of traces + logs — see [`docs/OPENTELEMETRY.md`](docs/OPENTELEMETRY.md). |
 | `Telemetry__OtlpEndpoint` | `http://localhost:4317` | Absolute http(s) OTLP endpoint. |
 | `Logging__…` | Information, single-line console | Standard ASP.NET Core logging settings. |
 | `Listonic__Email` / `Listonic__Password` | — | stdio mode only. |
 
-Calls to Listonic are rate-limited client-side (bursts of 15, then 2 per second; extra calls wait).
+Calls to Listonic are rate-limited client-side (by default bursts of 15, then 2 per second; extra calls wait).
 
 ## Local development
 
