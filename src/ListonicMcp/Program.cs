@@ -142,3 +142,6 @@ app.Logger.LogInformation("ListonicMcp v{Version} starting",
     typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "unknown");
 
 app.Run();
+
+/// <summary>Visible to <c>WebApplicationFactory&lt;Program&gt;</c> in the in-memory OAuth flow tests.</summary>
+public partial class Program;

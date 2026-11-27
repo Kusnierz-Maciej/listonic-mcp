@@ -190,4 +190,5 @@ They run nightly in CI against the latest release, and an issue is opened when t
 - delete every `[test] ` list once when the run starts (so a crashed or cancelled run is cleaned up by
   the next one) and after each test class.
 
-Pull requests run only the unit + offline tests.
+Pull requests run only the unit + offline tests — including the whole OAuth sign-in flow against an in-memory
+server with a mocked Listonic (`OAuthFlowTests`).

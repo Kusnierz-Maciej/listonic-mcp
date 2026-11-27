@@ -12,6 +12,7 @@
     <ItemGroup>
         <PackageReference Include="TUnit" />
         <PackageReference Include="NSubstitute" />
+        <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     </ItemGroup>
 
     <ItemGroup>
