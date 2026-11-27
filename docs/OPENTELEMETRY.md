@@ -35,6 +35,18 @@ Set the env vars in your compose file (both compose files have them commented ou
 ```
 
 This sends logs and traces to e.g. an Alloy collector, which forwards logs to Loki and traces to Tempo.
+The container must be able to resolve the collector's name: when Alloy runs in its own compose project, join that
+project's shared network. `docker-compose.synology.yml` has this ready, commented out — uncomment both blocks:
+
+```yaml
+    networks:
+      - default
+      - observability          # created by the observability stack
+...
+networks:
+  observability:
+    external: true
+```
 The endpoint must be an absolute `http(s)://` URI — otherwise the server refuses to start.
 
 Each trace is built from four span sources:

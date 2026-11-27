@@ -37,6 +37,16 @@ services:
       # Telemetry — OTLP export to the logging stack's Alloy receiver.
       #- Telemetry__Enabled=true
       #- Telemetry__OtlpEndpoint=http://alloy:4317
+    # With telemetry on, join the observability stack's shared network so `alloy` resolves
+    # (uncomment this and the top-level `networks:` block at the end of the file).
+    #networks:
+    #  - default
+    #  - observability
     # No volumes: the server keeps no state on disk (OAuth tokens are derived from the token secret),
     # so the Synology bind-mount/ACL `user:` workaround is not needed.
     restart: unless-stopped
+
+# Shared network created by the observability stack (Alloy/Loki/Tempo/Grafana) — start that stack first.
+#networks:
+#  observability:
+#    external: true
